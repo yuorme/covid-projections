@@ -1,7 +1,7 @@
 *.ipynb
 *.pickle
-*.csv
 *.checkpoint
 *.json
 *.bak
 *.yml
+*.pdf
