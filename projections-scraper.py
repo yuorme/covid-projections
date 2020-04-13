@@ -73,6 +73,7 @@ def get_ihme_filelist():
     file_list = [p.find_all('a') for p in soup.find_all('p') if p.find_all('a', href=re.compile('ihmecovid19storage')) != []] 
     file_list = list(itertools.chain.from_iterable(file_list)) #join list of lists
     file_list = [f['href'] for f in file_list] #get file url
+    file_list.append(file_list.pop(0)) #insert latest list at end to ensure chronological order
     
     return file_list
 
