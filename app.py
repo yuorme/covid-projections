@@ -20,6 +20,7 @@ from column_translater import ihme_column_translator
 def load_projections():
     
     df = pd.read_csv(os.path.join('data','ihme_compiled.csv'))
+    df = df[df.model_version != '2020_04_05.05.us']
 
     df['date'] = pd.to_datetime(df['date'])
     df['model_date'] = pd.to_datetime(df['model_version'].str[0:10].str.replace('_','-'))
@@ -36,7 +37,7 @@ def filter_df(df, model, location, metric, start_date, end_date):
         (dff.model_date >= start_date) &
         (dff.model_date <= end_date) & 
         (dff.date > '2020-02-15') &
-        (dff[metric] > 0)
+        (dff.date < '2020-07-15')
         ]
     return dff
 
@@ -111,6 +112,21 @@ controls = dbc.Card(
     body=True,
 )
 
+plotly_config = dict(
+    scrollZoom = False,
+    displaylogo= False,
+    showLink = False,
+    modeBarButtonsToRemove = [
+    'sendDataToCloud',
+    'zoomIn2d',
+    'zoomOut2d',
+    'hoverClosestCartesian',
+    'hoverCompareCartesian',
+    'hoverClosest3d',
+    'hoverClosestGeo',
+    'resetScale2d']
+)
+
 app.layout = dbc.Container(
     [
         dbc.NavbarSimple(brand=title, color="primary", dark=True),
@@ -119,14 +135,85 @@ app.layout = dbc.Container(
         dbc.Row(
             [
                 dbc.Col(controls, md=3),
-                dbc.Col(dcc.Graph(id="primary-graph"), md=9),
+                dbc.Col(dcc.Graph(id="primary-graph", config=plotly_config), md=9),
             ],
             align="center",
         ),
+        html.Hr(),
         dbc.Row(id='stat-cards')
     ],
     fluid=True,
 )
+
+
+def build_cards(dff, metric, model):
+
+    metric_name = ihme_column_translator[metric]
+
+    #latest data
+    latest_version = dff.model_date.max()
+    proj_latest = dff[dff.model_date == latest_version][metric].max()
+    proj_latest_model = dff[dff.model_date == latest_version]['model_version'].unique()[0]
+
+    #historical max and mins
+    version_max = dff.groupby('model_version')[metric].max()
+    proj_max = np.max(version_max)
+    proj_min = np.min(version_max)
+    proj_max_model = version_max.index[np.argmax(version_max)]
+    proj_min_model = version_max.index[np.argmin(version_max)]
+    
+    
+    cards = [
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader([html.H5(f"Projected Peak - Latest", className="card-title")]), #TODO:add dbc.Tooltip to explain what this card means
+                dbc.CardBody([
+                    # html.H6(f'{metric_name}', className="card-subtitle"),
+                    html.H2(f'{int(proj_latest)}', className='card-text'),
+                    html.P(f'{model} Version: {proj_latest_model}', className='card-text'),
+                ])
+            ], color="info", outline=True)
+        ]),
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader([html.H5(f"Projected Peak - Maximum", className="card-title")]), #TODO:add dbc.Tooltip to explain what this card means
+                dbc.CardBody([
+                    # html.H6(f'{metric_name}', className="card-subtitle"),
+                    html.H2(f'{int(proj_max)}', className='card-text'),
+                    html.P(f'{model} Version: {proj_max_model}', className='card-text'),
+                ])
+            ], color="danger", outline=True)
+        ]),
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader([html.H5("Projected Peak - Minimum", className="card-title")]), #TODO:add dbc.Tooltip to explain what this card means
+                dbc.CardBody([
+                    # html.H6(f'{metric_name}', className="card-subtitle"),
+                    html.H2(f'{int(proj_min)}', className='card-text'),
+                    html.P(f'{model} Version: {proj_min_model}', className='card-text'),
+                ])
+            ], color="success", outline=True)
+        ]),
+    ]
+
+    return cards
+
+@app.callback(
+    Output("stat-cards", "children"),
+    [
+        Input("model-dropdown", "value"),
+        Input("location-dropdown", "value"),
+        Input("metric-dropdown", "value"),
+        Input("model-date-picker", "start_date"),
+        Input("model-date-picker", "end_date")
+    ],
+)
+def make_primary_graph(model, location, metric, start_date, end_date):
+    '''Callback for the historical projections stats cards
+    '''
+    dff = filter_df(df, model, location, metric, start_date, end_date)
+
+    return build_cards(dff, metric, model)
 
 @app.callback(
     Output("primary-graph", "figure"),
@@ -139,7 +226,8 @@ app.layout = dbc.Container(
     ],
 )
 def make_primary_graph(model, location, metric, start_date, end_date):
-
+    '''Callback for the primary historical projections line chart
+    '''
     dff = filter_df(df, model, location, metric, start_date, end_date)
 
     dff['model_label'] = dff['model_date'].dt.strftime("%m/%d").str[1:]
