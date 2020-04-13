@@ -94,13 +94,13 @@ def get_ihme_df():
 
         model_folder = zf.namelist()[0][:-1] #drop trailing slash
         if model_folder != 'ihme-covid19': #parse from zip file folder name
-            model_name = model_folder
+            model_version = model_folder
         else: #parse from url folder name
-            model_name = f.split('/')[-2] 
+            model_version = f.split('/')[-2] 
 
         df = [pd.read_csv(zf.open(file)) for file in zf.namelist() if file.endswith('.csv')][0]
         df.rename(columns={'date_reported':'date'}, inplace=True) #fix inconsistent column names
-        df['model_name'] = model_name
+        df['model_version'] = model_version
      #     df = pd.read_csv(z.open('hospitalization_all_locs_corrected.csv'))
         df_list.append(df)
         
@@ -108,7 +108,6 @@ def get_ihme_df():
         
     if len(df_list) > 0:
         df = pd.concat(df_list).drop(columns=['V1','Unnamed: 0','location']) #drop problematic columns
-        df['model_date'] = df['model_name'].str.replace('_','-').str[:10] #convert model_name to date
         df.to_csv(os.path.join('data','ihme_compiled.csv'), index=False)
 
 
