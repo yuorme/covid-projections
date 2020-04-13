@@ -18,6 +18,7 @@ from column_translater import ihme_column_translator
 
 #load data
 def load_projections():
+    
     df = pd.read_csv(os.path.join('data','ihme_compiled.csv'))
 
     df['date'] = pd.to_datetime(df['date'])
@@ -26,6 +27,18 @@ def load_projections():
     df['model_name'] = 'IHME'
 
     return df
+
+def filter_df(df, model, location, metric, start_date, end_date):
+    dff = df.copy()
+    dff = dff[
+        (dff.location_name == location) & 
+        (dff.model_name == model) &
+        (dff.model_date >= start_date) &
+        (dff.model_date <= end_date) & 
+        (dff.date > '2020-02-15') &
+        (dff[metric] > 0)
+        ]
+    return dff
 
 df = load_projections()
 
@@ -110,6 +123,7 @@ app.layout = dbc.Container(
             ],
             align="center",
         ),
+        dbc.Row(id='stat-cards')
     ],
     fluid=True,
 )
@@ -125,15 +139,8 @@ app.layout = dbc.Container(
     ],
 )
 def make_primary_graph(model, location, metric, start_date, end_date):
-    dff = df.copy()
-    dff = dff[
-        (dff.location_name == location) & 
-        (dff.model_name == model) &
-        (dff.model_date >= start_date) &
-        (dff.model_date <= end_date) & 
-        (dff.date > '2020-02-15') &
-        (dff[metric] > 0)
-        ]
+
+    dff = filter_df(df, model, location, metric, start_date, end_date)
 
     dff['model_label'] = dff['model_date'].dt.strftime("%m/%d").str[1:]
 
