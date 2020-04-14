@@ -247,6 +247,14 @@ def make_primary_graph(model, location, metric, start_date, end_date):
 
     fig.layout.template = 'ggplot2'
     fig.update_layout(
+        annotations=[dict(
+            x=0.01,
+            y=0.98,
+            xref="paper",
+            yref="paper",
+            text="@CovidProjection",
+            showarrow=False,
+        )],
         legend_title='<b>Model Date</b>',
         legend=dict(orientation='v', x=1, y=0.5),
         margin=dict(l=40, r=40, t=40, b=40),
@@ -262,4 +270,4 @@ def make_primary_graph(model, location, metric, start_date, end_date):
     return fig
 
 if __name__ == "__main__":
-    app.run_server(debug=False, port=5000)
+    app.run_server(debug=True, port=5000)
