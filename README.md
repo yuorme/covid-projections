@@ -5,7 +5,7 @@ COVID-19 Projections Data and Dashboard (https://covid-projections.com/)
 
 # Current Functionality
 
-Covid Projections
+Covid Projections is under active development, current features are shown here.
 
 ### Interactive Dashboard:
 - Historical model projections for a given country or region (currently only supports IHME data)
