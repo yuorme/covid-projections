@@ -51,7 +51,7 @@ app = dash.Dash(
         {"name": "viewport", "content": "width=device-width, initial-scale=1"}
     ]
 )
-title = 'COVID-19 Projections Tracker'
+title = 'COVID Projections Tracker'
 app.title = title
 server = app.server
 
@@ -135,7 +135,7 @@ app.layout = dbc.Container(
         dbc.Row(
             [
                 dbc.Col(controls, md=3),
-                dbc.Col(dbc.Spinner(dcc.Graph(id='primary-graph', config=plotly_config), color='primary'), md=9),
+                dbc.Col(dcc.Graph(id="primary-graph", config=plotly_config), md=9),
             ],
             align="center",
         ),
