@@ -9,5 +9,6 @@ COVID-19 Projections Data and Dashboard
 ### COVID-19 Projections Dashboard
 https://covid-projections.herokuapp.com/
 - Historical model projections for a given country or region (currently only supports IHME data)
+
 ![COVID Projections Demo](assets/ihme_tracker_v1.gif)
 
