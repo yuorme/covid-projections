@@ -166,7 +166,7 @@ def build_cards(dff, metric, model):
     cards = [
         dbc.Col([
             dbc.Card([
-                dbc.CardHeader([html.H5(f"Projected Peak - Latest", className="card-title")]), #TODO:add dbc.Tooltip to explain what this card means
+                dbc.CardHeader([html.H5(f"Projected Peak - Latest", className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
                 dbc.CardBody([
                     # html.H6(f'{metric_name}', className="card-subtitle"),
                     html.H2(f'{int(proj_latest)}', className='card-text'),
@@ -176,7 +176,7 @@ def build_cards(dff, metric, model):
         ]),
         dbc.Col([
             dbc.Card([
-                dbc.CardHeader([html.H5(f"Projected Peak - Maximum", className="card-title")]), #TODO:add dbc.Tooltip to explain what this card means
+                dbc.CardHeader([html.H5(f"Projected Peak - Maximum", className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
                 dbc.CardBody([
                     # html.H6(f'{metric_name}', className="card-subtitle"),
                     html.H2(f'{int(proj_max)}', className='card-text'),
@@ -186,7 +186,7 @@ def build_cards(dff, metric, model):
         ]),
         dbc.Col([
             dbc.Card([
-                dbc.CardHeader([html.H5("Projected Peak - Minimum", className="card-title")]), #TODO:add dbc.Tooltip to explain what this card means
+                dbc.CardHeader([html.H5("Projected Peak - Minimum", className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
                 dbc.CardBody([
                     # html.H6(f'{metric_name}', className="card-subtitle"),
                     html.H2(f'{int(proj_min)}', className='card-text'),
