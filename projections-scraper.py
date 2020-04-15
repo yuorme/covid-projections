@@ -16,6 +16,8 @@ import re
 import itertools
 import zipfile
 
+from region_abbreviations import abbrev_us_state
+
 def get_date_list(min_date):
     '''
     generates list of dates from today backwards to min_date
@@ -118,7 +120,44 @@ def get_ihme_df():
         df['location_name'] = np.where(df['location_name'] == 'US', 'United States of America', df['location_name']) 
         df.to_csv(os.path.join('data','ihme_compiled.csv'), index=False)
 
+def get_covidtracking_df():
+    '''
+    Download real data from the COVID Tracking Project and save as CSV in data/.
+    Includes US national data + state-level data.
+    '''
+
+    # Country level historical data
+    url = 'https://covidtracking.com/api/us/daily.csv'
+    r = requests.get(url)
+    if r.ok:
+        df_us = pd.read_csv(io.StringIO(r.text))
+        df_us = df_us.drop('states', axis=1)
+        df_us.insert(1, 'location_name', 'United States of America')
+        df_us = df_us.assign(location_abbr='US')
+    else:
+        df_us = pd.DataFrame()
+        print('COVID Tracking US data download failed')
+
+    # State level historical data
+    url = 'https://covidtracking.com/api/v1/states/daily.csv'
+    r = requests.get(url)
+    if r.ok:
+        df_states = pd.read_csv(io.StringIO(r.text))
+        df_states = df_states.drop('fips', axis=1)
+        df_states = df_states.rename({ 'state': 'location_abbr' }, axis=1)
+        df_states.insert(1, 'location_name', df_states['location_abbr'].map(abbrev_us_state))
+    else:
+        df_states = pd.DataFrame()
+        print('COVID Tracking state data download failed')
+
+    df_combined = pd.concat([df_us, df_states])
+
+    # Sort and calculate daily New ICU Patients using deltas of cumulative
+    df_combined = df_combined.sort_values(['date', 'location_name'], ascending=[False, True])
+    df_combined['inIcuIncrease'] = df_combined.groupby('location_name')['inIcuCumulative'].transform(lambda x: x.diff(-1))
+    df_combined.to_csv(os.path.join('data', 'covidtracking_compiled.csv'), index=False)
 
 if __name__ == "__main__":
     get_lanl_df()
     get_ihme_df()
+    get_covidtracking_df()
