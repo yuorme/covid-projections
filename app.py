@@ -46,7 +46,13 @@ df = load_projections()
 #initialize app
 app = dash.Dash(
     __name__, 
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    external_stylesheets=[dbc.themes.BOOTSTRAP,
+                          {
+                                'href': 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css',
+                                'rel': 'stylesheet',
+                                'crossorigin': 'anonymous'
+                            }
+                          ],
     meta_tags=[
         {"name": "viewport", "content": "width=device-width, initial-scale=1"}
     ]
@@ -153,7 +159,49 @@ app.layout = dbc.Container(
             align="center",
         ),
         html.Hr(),
-        dbc.Row(id='stat-cards')
+        dbc.Row(id='stat-cards'),
+        html.Hr(),
+
+        dbc.Navbar(
+            [
+                dbc.Row(
+                    [
+                        dbc.Col(
+                                html.A(
+                                    dbc.Row(
+                                        [
+                                            dbc.Col(html.I(className="fa fa-github-square", style={"font-size":"48px"})),
+                                            dbc.Col(dbc.NavbarBrand("Github", className="ml-2"))
+                                        ],
+                                        align="center",
+                                        no_gutters=True,
+                                    ),
+                                    href="https://github.com/yuorme/covid-projections",
+                                ),
+                            width="auto"
+                            )
+                        ,
+                        dbc.Col(
+                            html.A(
+                                dbc.Row(
+                                    [
+                                        dbc.Col(html.I(className="fa fa-twitter", style={"font-size":"48px"})),
+                                        dbc.Col(dbc.NavbarBrand("Twitter", className="ml-2")),
+                                    ],
+                                    align="center",
+                                    no_gutters=True,
+                                ),
+                                href="https://twitter.com/yuorme",
+                            ),
+                            width="auto"
+                        )
+                    ],
+                    align="center"
+                    )
+            ],
+            color="dark",
+            dark=True,
+        )
     ],
     fluid=True,
 )
