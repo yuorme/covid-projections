@@ -108,6 +108,19 @@ controls = dbc.Card(
                 ),
             ]
         ),
+        dbc.FormGroup(
+            [
+                dbc.Label(""),
+                dbc.Checklist(
+                    options=[
+                        {"label": "Log scale y-axis", "value": True}
+                    ],
+                    value=False,
+                    id="log-scale-toggle",
+                    switch=True,
+                ),
+            ]
+)
     ],
     body=True,
 )
@@ -219,10 +232,11 @@ def make_primary_graph(model, location, metric, start_date, end_date):
         Input("location-dropdown", "value"),
         Input("metric-dropdown", "value"),
         Input("model-date-picker", "start_date"),
-        Input("model-date-picker", "end_date")
+        Input("model-date-picker", "end_date"),
+        Input("log-scale-toggle", "value")
     ],
 )
-def make_primary_graph(model, location, metric, start_date, end_date):
+def make_primary_graph(model, location, metric, start_date, end_date, log_scale):
     '''Callback for the primary historical projections line chart
     '''
     dff = filter_df(df, model, location, metric, start_date, end_date)
@@ -232,6 +246,9 @@ def make_primary_graph(model, location, metric, start_date, end_date):
     plot_title = f'{model} - {location} - {ihme_column_translator[metric]}'
     num_models = len(dff.model_version.unique())
     sequential_color_scale = px.colors.sequential.tempo
+
+    # Change y-axis scale depending on toggle value
+    y_axis_type = ("log" if log_scale else "-")
 
     fig = px.line(
         dff,
@@ -265,7 +282,9 @@ def make_primary_graph(model, location, metric, start_date, end_date):
                 xref= 'x', x0= datetime.today(), x1= datetime.today(),
                 line=dict(color="Black", width=2, dash='dashdot')
             )
-        ])
+        ],
+        yaxis_type=y_axis_type
+    )
 
     return fig
 
