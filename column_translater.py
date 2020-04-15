@@ -34,4 +34,35 @@ ihme_column_translator = {
     'icuover_upper': 'ICU Beds Shortage (Upper)',
 }
 
-    
+imhe_to_covidtracking = {
+    # mean
+    'allbed_mean': 'hospitalizedCurrently',
+    'ICUbed_mean': 'inIcuCurrently',
+    'InvVen_mean': 'onVentilatorCurrently',
+    'deaths_mean': 'deathIncrease',
+    'admis_mean': 'hospitalizedIncrease',
+    'newICU_mean': 'inIcuIncrease',
+    'totdea_mean': 'death',
+    'bedover_mean': None,
+    'icuover_mean': None,
+    # lower
+    'allbed_lower': 'hospitalizedCurrently',
+    'ICUbed_lower': 'inIcuCurrently',
+    'InvVen_lower': 'onVentilatorCurrently',
+    'deaths_lower': 'deathIncrease',
+    'admis_lower': 'hospitalizedIncrease',
+    'newICU_lower': 'inIcuIncrease',
+    'totdea_lower': 'death',
+    'bedover_lower': None,
+    'icuover_lower': None,
+    # upper
+    'allbed_upper': 'hospitalizedCurrently',
+    'ICUbed_upper': 'inIcuCurrently',
+    'InvVen_upper': 'onVentilatorCurrently',
+    'deaths_upper': 'deathIncrease',
+    'admis_upper': 'hospitalizedIncrease',
+    'newICU_upper': 'inIcuIncrease',
+    'totdea_upper': 'death',
+    'bedover_upper': None,
+    'icuover_upper': None,
+}

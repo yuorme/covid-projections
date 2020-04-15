@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 from region_abbreviations import us_state_abbrev
-from column_translater import ihme_column_translator
+from column_translater import ihme_column_translator, imhe_to_covidtracking
 
 
 #load data
@@ -41,7 +41,32 @@ def filter_df(df, model, location, metric, start_date, end_date):
         ]
     return dff
 
+def load_real():
+
+    df_real = pd.read_csv(os.path.join('data', 'covidtracking_compiled.csv'), dtype={'date': str})
+    df_real['date'] = pd.to_datetime(df_real['date'])
+    df_real['model_name'] = 'COVID Tracking Project'
+    df_real['model_label'] = 'real'
+    df_real['model_version'] = 'Real'
+
+    return df_real
+
+def filter_real(df, location, metric):
+    dff = df.copy()
+    dff = dff[
+        (dff.location_name == location) &
+        (dff.date > '2020-02-15') &
+        (dff.date < '2020-07-15')
+    ]
+
+    try:
+        dff = dff.rename({ imhe_to_covidtracking[metric]: metric }, axis=1)
+        return dff if dff[metric].count() > 0 else None
+    except:
+        return None
+
 df = load_projections()
+df_real = load_real()
 
 #initialize app
 app = dash.Dash(
@@ -231,14 +256,20 @@ def make_primary_graph(model, location, metric, start_date, end_date):
 
     plot_title = f'{model} - {location} - {ihme_column_translator[metric]}'
     num_models = len(dff.model_version.unique())
-    sequential_color_scale = px.colors.sequential.tempo
+    sequential_color_scale = px.colors.sequential.tempo[-num_models:]
+
+    # Add real data
+    df_real_filtered = filter_real(df_real, location, metric)
+    if df_real_filtered is not None:
+        dff = pd.concat([dff, df_real_filtered])
+        sequential_color_scale = sequential_color_scale + ['rgb(128, 0, 0)']
 
     fig = px.line(
         dff,
         x='date',
         y=metric,
         color='model_label',
-        color_discrete_sequence=sequential_color_scale[len(sequential_color_scale)-num_models:],
+        color_discrete_sequence=sequential_color_scale,
         title=plot_title,
         labels=ihme_column_translator,
         hover_name='model_version',
