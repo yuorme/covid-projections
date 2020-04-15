@@ -110,10 +110,10 @@ controls = dbc.Card(
         ),
         dbc.FormGroup(
             [
-                dbc.Label(""),
+                dbc.Label("Log scale y-axis"),
                 dbc.Checklist(
                     options=[
-                        {"label": "Log scale y-axis", "value": True}
+                        {"label": "", "value": True}
                     ],
                     value=False,
                     id="log-scale-toggle",
