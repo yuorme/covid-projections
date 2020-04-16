@@ -136,7 +136,7 @@ controls = dbc.Card(
 )
 
 plotly_config = dict(
-    scrollZoom = False,
+    scrollZoom = True,
     displaylogo= False,
     showLink = False,
     modeBarButtonsToRemove = [
@@ -337,6 +337,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale)
                 line=dict(color="Black", width=2, dash='dashdot')
             )
         ],
+        yaxis=dict(fixedrange=True), #fix y-axis for scrollZoom to work properly
         yaxis_type=y_axis_type
     )
 
