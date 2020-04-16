@@ -119,17 +119,18 @@ controls = dbc.Card(
         ),
         dbc.FormGroup(
             [
-                dbc.Label("Log scale y-axis"),
                 dbc.Checklist(
                     options=[
-                        {"label": "", "value": True}
+                        {"label": "Semi-log Plot", "value": True}
                     ],
                     value=False,
                     id="log-scale-toggle",
                     switch=True,
+                    style={"margin-left":20}
                 ),
-            ]
-)
+            ],
+            row=True
+        )
     ],
     body=True,
 )
