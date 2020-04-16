@@ -171,6 +171,20 @@ app.layout = dbc.Container(
                 dbc.Row(
                     [
                         dbc.Col(
+                            html.A(
+                                dbc.Row(
+                                    [
+                                        dbc.Col(html.I(className="fa fa-twitter", style={"font-size":"32px"})),
+                                        dbc.Col(dbc.NavbarBrand("Twitter", className="ml-2")),
+                                    ],
+                                    align="center",
+                                    no_gutters=True,
+                                ),
+                                href="https://twitter.com/CovidProjection",
+                            ),
+                            width="auto"
+                        ),
+                        dbc.Col(
                                 html.A(
                                     dbc.Row(
                                         [
@@ -185,26 +199,12 @@ app.layout = dbc.Container(
                             width="auto"
                             )
                         ,
-                        dbc.Col(
-                            html.A(
-                                dbc.Row(
-                                    [
-                                        dbc.Col(html.I(className="fa fa-twitter", style={"font-size":"32px"})),
-                                        dbc.Col(dbc.NavbarBrand("Twitter", className="ml-2")),
-                                    ],
-                                    align="center",
-                                    no_gutters=True,
-                                ),
-                                href="https://twitter.com/CovidProjection",
-                            ),
-                            width="auto"
-                        )
                     ],
                     align="center"
                     )
             ],
-            color="dark",
-            dark=True,
+            # color="dark",
+            # dark=True,
         )
     ],
     fluid=True,
@@ -301,6 +301,8 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale)
 
     # Change y-axis scale depending on toggle value
     y_axis_type = ("log" if log_scale else "-")
+    if y_axis_type == 'log':
+        dff = dff[dff[metric] > 3] #prevent tiny log scale values from showing up
 
     fig = px.line(
         dff,
