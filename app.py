@@ -173,7 +173,7 @@ app.layout = dbc.Container(
                                 html.A(
                                     dbc.Row(
                                         [
-                                            dbc.Col(html.I(className="fa fa-github-square", style={"font-size":"48px"})),
+                                            dbc.Col(html.I(className="fa fa-github-square", style={"font-size":"36px"})),
                                             dbc.Col(dbc.NavbarBrand("Github", className="ml-2"))
                                         ],
                                         align="center",
@@ -188,7 +188,7 @@ app.layout = dbc.Container(
                             html.A(
                                 dbc.Row(
                                     [
-                                        dbc.Col(html.I(className="fa fa-twitter", style={"font-size":"48px"})),
+                                        dbc.Col(html.I(className="fa fa-twitter", style={"font-size":"36px"})),
                                         dbc.Col(dbc.NavbarBrand("Twitter", className="ml-2")),
                                     ],
                                     align="center",
