@@ -49,7 +49,13 @@ df = load_projections()
 #initialize app
 app = dash.Dash(
     __name__, 
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    external_stylesheets=[dbc.themes.BOOTSTRAP,
+                          {
+                                'href': 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css',
+                                'rel': 'stylesheet',
+                                'crossorigin': 'anonymous'
+                            }
+                          ],
     meta_tags=[
         {"name": "viewport", "content": "width=device-width, initial-scale=1"}
     ]
@@ -111,6 +117,19 @@ controls = dbc.Card(
                 ),
             ]
         ),
+        dbc.FormGroup(
+            [
+                dbc.Label("Log scale y-axis"),
+                dbc.Checklist(
+                    options=[
+                        {"label": "", "value": True}
+                    ],
+                    value=False,
+                    id="log-scale-toggle",
+                    switch=True,
+                ),
+            ]
+)
     ],
     body=True,
 )
@@ -143,7 +162,49 @@ app.layout = dbc.Container(
             align="center",
         ),
         html.Hr(),
-        dbc.Row(id='stat-cards')
+        dbc.Row(id='stat-cards'),
+        html.Hr(),
+
+        dbc.Navbar(
+            [
+                dbc.Row(
+                    [
+                        dbc.Col(
+                                html.A(
+                                    dbc.Row(
+                                        [
+                                            dbc.Col(html.I(className="fa fa-github-square", style={"font-size":"48px"})),
+                                            dbc.Col(dbc.NavbarBrand("Github", className="ml-2"))
+                                        ],
+                                        align="center",
+                                        no_gutters=True,
+                                    ),
+                                    href="https://github.com/yuorme/covid-projections",
+                                ),
+                            width="auto"
+                            )
+                        ,
+                        dbc.Col(
+                            html.A(
+                                dbc.Row(
+                                    [
+                                        dbc.Col(html.I(className="fa fa-twitter", style={"font-size":"48px"})),
+                                        dbc.Col(dbc.NavbarBrand("Twitter", className="ml-2")),
+                                    ],
+                                    align="center",
+                                    no_gutters=True,
+                                ),
+                                href="https://twitter.com/yuorme",
+                            ),
+                            width="auto"
+                        )
+                    ],
+                    align="center"
+                    )
+            ],
+            color="dark",
+            dark=True,
+        )
     ],
     fluid=True,
 )
@@ -222,10 +283,11 @@ def make_primary_graph(model, location, metric, start_date, end_date):
         Input("location-dropdown", "value"),
         Input("metric-dropdown", "value"),
         Input("model-date-picker", "start_date"),
-        Input("model-date-picker", "end_date")
+        Input("model-date-picker", "end_date"),
+        Input("log-scale-toggle", "value")
     ],
 )
-def make_primary_graph(model, location, metric, start_date, end_date):
+def make_primary_graph(model, location, metric, start_date, end_date, log_scale):
     '''Callback for the primary historical projections line chart
     '''
     dff = filter_df(df, model, location, metric, start_date, end_date)
@@ -235,6 +297,9 @@ def make_primary_graph(model, location, metric, start_date, end_date):
     plot_title = f'{model} - {location} - {ihme_column_translator[metric]}'
     num_models = len(dff.model_version.unique())
     sequential_color_scale = px.colors.sequential.tempo
+
+    # Change y-axis scale depending on toggle value
+    y_axis_type = ("log" if log_scale else "-")
 
     fig = px.line(
         dff,
@@ -268,7 +333,9 @@ def make_primary_graph(model, location, metric, start_date, end_date):
                 xref= 'x', x0= datetime.today(), x1= datetime.today(),
                 line=dict(color="Black", width=2, dash='dashdot')
             )
-        ])
+        ],
+        yaxis_type=y_axis_type
+    )
 
     return fig
 
