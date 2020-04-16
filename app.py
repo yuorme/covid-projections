@@ -43,6 +43,22 @@ def filter_df(df, model, location, metric, start_date, end_date):
 
 df = load_projections()
 
+# Make a list of all of the U.S. locations
+us_locations = list(us_state_abbrev.keys()) + \
+        ['Other Counties, WA', 'King and Snohomish Counties (excluding Life Care Center),\
+         WA','United States of America', 'Life Care Center, Kirkland, WA']
+us_locations.sort()
+# Move 'United States of America' to the front
+us_locations.insert(0, us_locations.pop(us_locations.index('United States of America')))
+
+non_us_locations = list( set(df.location_name.unique()) - set(us_locations))
+non_us_locations.sort()
+
+# combine the two lists and make sure we don't somehow have duplicates while keeping the order we created
+all_locations = us_locations + non_us_locations
+all_locations = list(dict.fromkeys(all_locations))
+
+
 #initialize app
 app = dash.Dash(
     __name__, 
@@ -83,7 +99,7 @@ controls = dbc.Card(
                 dcc.Dropdown(
                     id="location-dropdown",
                     options=[
-                        {"label": col, "value": col} for col in df.location_name.unique()
+                        {"label": col, "value": col} for col in all_locations
                     ],
                     value="United States of America",
                 ),
