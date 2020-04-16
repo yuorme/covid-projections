@@ -32,6 +32,12 @@ def load_projections():
 
     return df
 
+def load_actuals():
+
+    df = pd.read_csv(os.path.join('data', 'nytimes_cases.csv'))
+
+    return df
+
 def filter_df(df, model, location, metric, start_date, end_date):
     dff = df.copy()
     dff = dff[
@@ -44,7 +50,33 @@ def filter_df(df, model, location, metric, start_date, end_date):
         ]
     return dff
 
+def add_actual_deaths(df, location, metric, start_date, end_date):
+    cases_df = df_cases.rename(columns={
+        'daily_deaths': 'deaths_mean'
+    })
+
+    cases_df = cases_df[
+        (cases_df.location_name == location) &
+        (cases_df.date > '2020-02-15') &
+        (cases_df.date < '2020-07-15')
+    ]
+
+    cases_df['deaths_upper'] = cases_df['deaths_mean']
+    cases_df['deaths_lower'] = cases_df['deaths_mean']
+
+    cases_df['model_name'] = 'NY TIMES'
+    cases_df['model_version'] = ''
+    cases_df['model_label'] = 'Actual'
+
+    for col in df.columns:
+        if col not in cases_df.columns:
+            cases_df[col] = np.nan
+
+    return pd.concat([df, cases_df])
+
 df = load_projections()
+
+df_cases = load_actuals()
 
 #initialize app
 app = dash.Dash(
@@ -294,6 +326,9 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale)
     dff = filter_df(df, model, location, metric, start_date, end_date)
 
     dff['model_label'] = dff['model_date'].dt.strftime("%m/%d").str[1:]
+
+    if 'death' in metric.lower():
+        dff = add_actual_deaths(dff, location, metric, start_date, end_date)
 
     plot_title = f'{model} - {location} - {ihme_column_translator[metric]}'
     num_models = len(dff.model_version.unique())
