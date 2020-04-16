@@ -337,6 +337,9 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale)
         yaxis_type=y_axis_type
     )
 
+    if y_axis_type == 'log':
+        fig.update_layout(yaxis = {'dtick': 1})
+
     return fig
 
 if __name__ == "__main__":
