@@ -194,7 +194,7 @@ app.layout = dbc.Container(
                                     align="center",
                                     no_gutters=True,
                                 ),
-                                href="https://twitter.com/yuorme",
+                                href="https://twitter.com/CovidProjection",
                             ),
                             width="auto"
                         )
