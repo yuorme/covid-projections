@@ -100,7 +100,7 @@ controls = dbc.Card(
                     options=[
                         {"label": ihme_column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.tolist()
                     ],
-                    value="deaths_mean",
+                    value="totdea_mean",
                 ),
             ]
         ),
@@ -173,7 +173,7 @@ app.layout = dbc.Container(
                                 html.A(
                                     dbc.Row(
                                         [
-                                            dbc.Col(html.I(className="fa fa-github-square", style={"font-size":"36px"})),
+                                            dbc.Col(html.I(className="fa fa-github-square", style={"font-size":"32px"})),
                                             dbc.Col(dbc.NavbarBrand("Github", className="ml-2"))
                                         ],
                                         align="center",
@@ -188,7 +188,7 @@ app.layout = dbc.Container(
                             html.A(
                                 dbc.Row(
                                     [
-                                        dbc.Col(html.I(className="fa fa-twitter", style={"font-size":"36px"})),
+                                        dbc.Col(html.I(className="fa fa-twitter", style={"font-size":"32px"})),
                                         dbc.Col(dbc.NavbarBrand("Twitter", className="ml-2")),
                                     ],
                                     align="center",
