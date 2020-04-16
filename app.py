@@ -7,7 +7,7 @@ import dash
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 
 import plotly.graph_objects as go
 import plotly.express as px
@@ -77,6 +77,35 @@ title = 'COVID Projections Tracker'
 app.title = title
 server = app.server
 
+collapse = html.Div(
+            [
+                dbc.Button(
+                "Advanced Options",
+                id="collapse-button",
+                className="mb-3",
+                color="primary",
+                ),
+                dbc.Collapse(
+                    dbc.FormGroup(
+                        [
+                            dbc.Label("Semi-log Plot"),
+                            dbc.Checklist(
+                                options=[
+                                    {"label": "", "value": True}
+                                ],
+                                value=False,
+                                id="log-scale-toggle",
+                                switch=True,
+                            ),
+                        ]
+                    ),
+                    id="collapse"
+                    )
+                ]
+            )
+
+
+
 #controls - adapted from https://dash-bootstrap-components.opensource.faculty.ai/examples/iris/
 controls = dbc.Card(
     [
@@ -130,19 +159,7 @@ controls = dbc.Card(
                 ),
             ]
         ),
-        dbc.FormGroup(
-            [
-                dbc.Label("Log scale y-axis"),
-                dbc.Checklist(
-                    options=[
-                        {"label": "", "value": True}
-                    ],
-                    value=False,
-                    id="log-scale-toggle",
-                    switch=True,
-                ),
-            ]
-)
+        collapse
     ],
     body=True,
 )
@@ -222,6 +239,16 @@ app.layout = dbc.Container(
     fluid=True,
 )
 
+@app.callback(
+    Output("collapse", "is_open"),
+    [Input("collapse-button", "n_clicks")],
+    [State("collapse", "is_open")],
+)
+def toggle_collapse(n, is_open):
+    if n:
+        return not is_open
+    return is_open
+
 
 def build_cards(dff, metric, model):
 
@@ -299,6 +326,7 @@ def make_primary_graph(model, location, metric, start_date, end_date):
         Input("model-date-picker", "end_date"),
         Input("log-scale-toggle", "value")
     ],
+
 )
 def make_primary_graph(model, location, metric, start_date, end_date, log_scale):
     '''Callback for the primary historical projections line chart
