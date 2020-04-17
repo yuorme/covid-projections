@@ -5,6 +5,7 @@
 # Adapted on definitions provided by the IHME in their readme.txt
 
 ihme_column_translator = {
+    'date': 'Date',
     # mean
     'allbed_mean': 'All Beds Used (Mean)',
     'ICUbed_mean': 'ICU Beds Used (Mean)',
