@@ -61,6 +61,9 @@ non_us_locations.sort()
 all_locations = us_locations + non_us_locations
 all_locations = list(dict.fromkeys(all_locations))
 
+# Get list of all sequential color themes
+named_colorscales = px.colors.named_colorscales()
+style_lists = [[style,getattr(px.colors.sequential,style)] for style in dir(px.colors.sequential) if style.lower() in named_colorscales and len(getattr(px.colors.sequential,style)) >= 12]
 
 #initialize app
 app = dash.Dash(
@@ -162,6 +165,22 @@ controls = dbc.Card(
                 ),
             ]
         ),
+        dbc.FormGroup(
+            [
+                dbc.Label("Color Scale"),
+                dcc.Dropdown(
+                    id="color-dropdown",
+                    options=[
+                        # TODO could we maybe add color swatches for the color scales?
+                        # Doesn't seem possible with dbc Dropdown because labels can only be strings
+                        {'label' : row[ 0 ], 'value' : row[ 0 ]} for row in style_lists
+
+                    ],
+                    value = "tempo"
+
+                )
+            ]
+        ),
         collapse
     ],
     body=True,
@@ -226,7 +245,7 @@ app.layout = dbc.Container(
                                         align="center",
                                         no_gutters=True,
                                     ),
-                                    href="https://github.com/yuorme/covid-projections",
+                                    href="https://twitter.com/CovidProjection",
                                 ),
                             width="auto"
                             )
@@ -327,11 +346,12 @@ def make_primary_graph(model, location, metric, start_date, end_date):
         Input("metric-dropdown", "value"),
         Input("model-date-picker", "start_date"),
         Input("model-date-picker", "end_date"),
-        Input("log-scale-toggle", "value")
+        Input("log-scale-toggle", "value"),
+        Input("color-dropdown", "value")
     ],
 
 )
-def make_primary_graph(model, location, metric, start_date, end_date, log_scale):
+def make_primary_graph(model, location, metric, start_date, end_date, log_scale, color_scale_name):
     '''Callback for the primary historical projections line chart
     '''
     dff = filter_df(df, model, location, metric, start_date, end_date)
@@ -340,7 +360,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale)
 
     plot_title = f'{model} - {location} - {ihme_column_translator[metric]}'
     num_models = len(dff.model_version.unique())
-    sequential_color_scale = px.colors.sequential.tempo
+    sequential_color_scale = getattr(px.colors.sequential,color_scale_name)
 
     # Change y-axis scale depending on toggle value
     y_axis_type = ("log" if log_scale else "-")
