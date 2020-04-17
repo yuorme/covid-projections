@@ -412,4 +412,4 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     return fig
 
 if __name__ == "__main__":
-    app.run_server(debug=True, port=5000)
+    app.run_server(debug=False, port=5000)
