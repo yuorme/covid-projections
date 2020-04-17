@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 # United States of America Python Dictionary to translate States,
 # Districts & Territories to Two-Letter codes and vice versa.
 #
