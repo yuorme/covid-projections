@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 # Generates human readable labels for IHME data column names
 # Adapted on definitions provided by the IHME in their readme.txt
 
