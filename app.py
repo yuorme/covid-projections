@@ -62,7 +62,8 @@ all_locations = us_locations + non_us_locations
 all_locations = list(dict.fromkeys(all_locations))
 
 # Get list of all sequential color themes
-named_colorscales = px.colors.named_colorscales()
+excluded_colorscales = ['plotly3','gray','haline','ice','solar','thermal']
+named_colorscales = [s for s in px.colors.named_colorscales() if s not in excluded_colorscales]
 style_lists = [[style,getattr(px.colors.sequential,style)] for style in dir(px.colors.sequential) if style.lower() in named_colorscales and len(getattr(px.colors.sequential,style)) >= 12]
 
 #initialize app
