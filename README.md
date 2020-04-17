@@ -1,5 +1,5 @@
 # covid-projections
-COVID-19 Projections Data and Dashboard (https://covid-projections.com/)
+COVID-19 Projections Data and Dashboard (https://www.covid-projections.com/)
 
 ![COVID Projections Demo](assets/ihme_tracker_v1.gif)
 

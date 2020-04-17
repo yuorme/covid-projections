@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 import pandas as pd
 import numpy as np
 import os
@@ -145,7 +148,7 @@ controls = dbc.Card(
                     options=[
                         {"label": ihme_column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.tolist()
                     ],
-                    value="deaths_mean",
+                    value="totdea_mean",
                 ),
             ]
         ),
@@ -184,7 +187,7 @@ controls = dbc.Card(
 )
 
 plotly_config = dict(
-    scrollZoom = False,
+    scrollZoom = True,
     displaylogo= False,
     showLink = False,
     modeBarButtonsToRemove = [
@@ -219,10 +222,24 @@ app.layout = dbc.Container(
                 dbc.Row(
                     [
                         dbc.Col(
+                            html.A(
+                                dbc.Row(
+                                    [
+                                        dbc.Col(html.I(className="fa fa-twitter", style={"font-size":"32px"})),
+                                        dbc.Col(dbc.NavbarBrand("Twitter", className="ml-2")),
+                                    ],
+                                    align="center",
+                                    no_gutters=True,
+                                ),
+                                href="https://twitter.com/CovidProjection",
+                            ),
+                            width="auto"
+                        ),
+                        dbc.Col(
                                 html.A(
                                     dbc.Row(
                                         [
-                                            dbc.Col(html.I(className="fa fa-github-square", style={"font-size":"48px"})),
+                                            dbc.Col(html.I(className="fa fa-github-square", style={"font-size":"32px"})),
                                             dbc.Col(dbc.NavbarBrand("Github", className="ml-2"))
                                         ],
                                         align="center",
@@ -233,20 +250,6 @@ app.layout = dbc.Container(
                             width="auto"
                             )
                         ,
-                        dbc.Col(
-                            html.A(
-                                dbc.Row(
-                                    [
-                                        dbc.Col(html.I(className="fa fa-twitter", style={"font-size":"48px"})),
-                                        dbc.Col(dbc.NavbarBrand("Twitter", className="ml-2")),
-                                    ],
-                                    align="center",
-                                    no_gutters=True,
-                                ),
-                                href="https://twitter.com/yuorme",
-                            ),
-                            width="auto"
-                        )
                     ],
                     align="center"
                     )
@@ -360,7 +363,9 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     sequential_color_scale = getattr(px.colors.sequential,color_scale_name)
 
     # Change y-axis scale depending on toggle value
-    y_axis_type = "log" if log_scale else "-"
+    y_axis_type = ("log" if log_scale else "-")
+    if y_axis_type == 'log':
+        dff = dff[dff[metric] > 3] #prevent tiny log scale values from showing up
 
     fig = px.line(
         dff,
@@ -395,10 +400,14 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
                 line=dict(color="Black", width=2, dash='dashdot')
             )
         ],
+        yaxis=dict(fixedrange=True), #fix y-axis for scrollZoom to work properly
         yaxis_type=y_axis_type
     )
+
+    if y_axis_type == 'log':
+        fig.update_layout(yaxis = {'dtick': 1})
 
     return fig
 
 if __name__ == "__main__":
-    app.run_server(debug=True, port=5000)
+    app.run_server(debug=False, port=5000)
