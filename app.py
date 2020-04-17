@@ -83,39 +83,57 @@ title = 'COVID Projections Tracker'
 app.title = title
 server = app.server
 
-collapse = html.Div(
+collapse_plot_options = html.Div(
             [
                 dbc.Button(
-                "Advanced Options",
+                "Advanced Plot Options",
                 id="collapse-button",
                 className="mb-3",
-                color="primary",
+                color="dark",
+                outline=True,
+                size="sm",
+                block=True
                 ),
                 dbc.Collapse(
-                    dbc.FormGroup(
-                        [
-                            dbc.Label("Semi-log Plot"),
-                            dbc.Checklist(
-                                options=[
-                                    {"label": "", "value": True}
-                                ],
-                                value=False,
-                                id="log-scale-toggle",
-                                switch=True,
-                            ),
-                        ]
-                    ),
-                    id="collapse"
+                    [
+                        dbc.FormGroup(
+                            [
+                                dbc.Checklist(
+                                    options=[
+                                        {"label": "Semi-log Plot", "value": True}
+                                    ],
+                                    value=False,
+                                    id="log-scale-toggle",
+                                    switch=True,
+                                ),
+                            ]
+                        ),
+                        dbc.FormGroup( #TODO: Fix Top and Left margins to align 
+                            [
+                                dbc.Label("Color"),
+                                dbc.Col(
+                                    dcc.Dropdown(
+                                        id="color-dropdown",
+                                        options=[
+                                            # TODO could we maybe add color swatches for the color scales?
+                                            # Doesn't seem possible with dbc Dropdown because labels can only be strings
+                                            {'label' : row[ 0 ], 'value' : row[ 0 ]} for row in style_lists
+                                        ],
+                                        value = "tempo"
+                                    ),
+                                ),
+                            ],
+                        ),
+                    ],
+                    id="collapse-plot-options"
                     )
                 ]
             )
 
-
-
 #controls - adapted from https://dash-bootstrap-components.opensource.faculty.ai/examples/iris/
 controls = dbc.Card(
     [
-        html.H4("Filters", className="card-title"),
+        html.H5("Filters", className="card-title"),
         dbc.FormGroup(
             [
                 dbc.Label("Model"),
@@ -165,23 +183,7 @@ controls = dbc.Card(
                 ),
             ]
         ),
-        dbc.FormGroup(
-            [
-                dbc.Label("Color Scale"),
-                dcc.Dropdown(
-                    id="color-dropdown",
-                    options=[
-                        # TODO could we maybe add color swatches for the color scales?
-                        # Doesn't seem possible with dbc Dropdown because labels can only be strings
-                        {'label' : row[ 0 ], 'value' : row[ 0 ]} for row in style_lists
-
-                    ],
-                    value = "tempo"
-
-                )
-            ]
-        ),
-        collapse
+        collapse_plot_options
     ],
     body=True,
 )
@@ -262,9 +264,9 @@ app.layout = dbc.Container(
 )
 
 @app.callback(
-    Output("collapse", "is_open"),
+    Output("collapse-plot-options", "is_open"),
     [Input("collapse-button", "n_clicks")],
-    [State("collapse", "is_open")],
+    [State("collapse-plot-options", "is_open")],
 )
 def toggle_collapse(n, is_open):
     if n:
@@ -410,4 +412,4 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     return fig
 
 if __name__ == "__main__":
-    app.run_server(debug=False, port=5000)
+    app.run_server(debug=True, port=5000)
