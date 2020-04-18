@@ -15,67 +15,13 @@ style_dict = {
     'turbid' : ['#dcdb89', '#c7a853', '#aa793c', '#815738', '#503b2e', '#221e1b']
 }
 
-// var color_dropdown = document.getElementById("color-dropdown");
-//
-// color_dropdown.getElementsByClassName('Select-value-label')[0].innerText
-//
-// color_dropdown.getElementsByClass('Select-menu-outer')
-//
-// color_dropdown.onclick = function() {
-//     color_dropdown.getElementsByClassName('Select-value-label')[0].innerText
-//     console.log('Hello');
-// }
-//
-// var color_dropdown = document.getElementById("color-dropdown");
-//
-// function checkDOMChange()
-// {
-//     var outer_menu = color_dropdown.getElementsByClassName('Select-menu-outer');
-//
-//     if (outer_menu.length > 0) {
-//         var check_for_swatches = document.getElementsByClassName("swatch");
-//         if( check_for_swatches.length === 0){
-//
-//             // console.log(outer_menu);
-//             var other_options = document.getElementsByClassName("VirtualizedSelectOption");
-//             for (let i = 0; i < other_options.length; i++) {
-//                 // get the color list
-//                 color_list = style_dict[other_options[i].innerHTML];
-//                 for (let j = 0; j < color_list.length; j++) {
-//                     var swatch_div = document.createElement("div");
-//                     swatch_div.setAttribute("class","swatch");
-//                     swatch_div.style.background = color_list[j];
-//                     other_options[i].appendChild(swatch_div);
-//                 }
-//
-//             }
-//         }
-//     }
-//     // check for any new element being inserted here,
-//     // or a particular node being modified
-//
-//     // call the function again after 100 milliseconds
-//     setTimeout( checkDOMChange, 100 );
-// }
-// checkDOMChange();
 
-function docReady(fn) {
-    // see if DOM is already available
-    if (document.readyState === "complete" || document.readyState === "interactive") {
-        // call on next available tick
-        setTimeout(fn, 1);
-    } else {
-        document.addEventListener("DOMContentLoaded", fn);
-    }
-}
 
-// docReady(function() {
-//     // DOM is loaded and ready for manipulation here
-// });
-
+const indicesOfInterest = [0,2,3,5];
 
 var dropdown_observer = new MutationObserver(function(mutations) {
     var color_dropdown = document.getElementById("color-dropdown");
+
     if (document.querySelector("#color-dropdown > div > div.Select-menu-outer") != null){
 
         if (color_dropdown.contains(document.querySelector("#color-dropdown > div > div.Select-menu-outer")) ) {
@@ -83,28 +29,57 @@ var dropdown_observer = new MutationObserver(function(mutations) {
             if ( outer_menu != null){
 
                 if (outer_menu.length > 0) {
-                    var check_for_swatches = document.getElementsByClassName("swatch");
+                    // var check_for_swatches = document.getElementsByClassName("swatch");
                     // console.log(outer_menu);
+                    var max_length = 0;
                     var other_options = document.getElementsByClassName("VirtualizedSelectOption");
                     for (let i = 0; i < other_options.length; i++) {
                         // get the color list
                         color_list = style_dict[other_options[i].innerHTML];
+
+                        // change style of Virtualized Select option to text-align center
+                        // console.log(style_div);
+                        // other_options[i].innerText = "";
+                        // console.log(other_options[i].innerText);
+                        var swatch_container = document.createElement("div");
+                        swatch_container.setAttribute("class", "swatch-container");
+                        // other_options[i].appendChild(swatch_container);
+
+                        var flag = false;
                         if( typeof color_list != "undefined"){
                             for (let j = 0; j < color_list.length; j++) {
-                                var swatch_div = document.createElement("div");
-                                swatch_div.setAttribute("class","swatch");
-                                swatch_div.style.background = color_list[j];
-                                other_options[i].appendChild(swatch_div);
+                                if ( indicesOfInterest.includes(j) ){
+                                    var swatch_div = document.createElement("div");
+                                    swatch_div.setAttribute("class","swatch");
+                                    swatch_div.style.background = color_list[j];
+                                    swatch_div.style.display = "inline-block";
+                                    swatch_container.appendChild(swatch_div);
+                                    // other_options[i].appendChild(swatch_div);
+                                    // other_options[i].appendChild(style_div);
+                                    // swatch_container.appendChild(swatch_div);
+                                }
+
                             }
+                            style_div = document.createElement("div");
+                            style_div.setAttribute("class", "swatchName");
+                            style_div.innerText= other_options[i].innerText;
+
+                            if(max_length === 0){
+                                max_length = style_div.innerText.length;
+                            } else if (style_div.innerText.length < max_length) {
+                                style_div.innerText = style_div.innerText + " ".repeat(((max_length - style_div.innerText.length) + 1))
+                            }
+
+                            other_options[i].removeChild(other_options[i].firstChild);
+                            other_options[i].appendChild(swatch_container);
+                            swatch_container.insertBefore(style_div, swatch_container.firstChild);
+                            // other_options[i].insertBefore(style_div, other_options[i].firstChild);
                         }
 
                     }
-                    // if( check_for_swatches.length === 0){
-                    //
-                    // }
+
                 }
             }
-            //observer.disconnect();
         }
     }
 });
