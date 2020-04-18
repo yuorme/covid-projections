@@ -17,7 +17,7 @@ style_dict = {
 
 
 
-const indicesOfInterest = [0,3,7,11];
+const indicesOfInterest = [0,2,3,5];
 
 var dropdown_observer = new MutationObserver(function(mutations) {
     var color_dropdown = document.getElementById("color-dropdown");
