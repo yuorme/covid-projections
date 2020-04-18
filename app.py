@@ -17,6 +17,7 @@ import plotly.express as px
 
 from region_abbreviations import us_state_abbrev
 from column_translater import ihme_column_translator
+from color_scales import decreasing_color_scales
 
 
 #load data
@@ -61,9 +62,6 @@ non_us_locations.sort()
 all_locations = us_locations + non_us_locations
 all_locations = list(dict.fromkeys(all_locations))
 
-# Get list of all sequential color themes
-named_colorscales = px.colors.named_colorscales()
-style_lists = [[style,getattr(px.colors.sequential,style)] for style in dir(px.colors.sequential) if style.lower() in named_colorscales and len(getattr(px.colors.sequential,style)) >= 12]
 
 #initialize app
 app = dash.Dash(
@@ -117,7 +115,7 @@ collapse_plot_options = html.Div(
                                         options=[
                                             # TODO could we maybe add color swatches for the color scales?
                                             # Doesn't seem possible with dbc Dropdown because labels can only be strings
-                                            {'label' : row[ 0 ], 'value' : row[ 0 ]} for row in style_lists
+                                            {'label' : row[ 0 ], 'value' : row[ 0 ]} for row in decreasing_color_scales
                                         ],
                                         value = "tempo"
                                     ),
