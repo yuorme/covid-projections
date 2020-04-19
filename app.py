@@ -22,13 +22,12 @@ from column_translater import ihme_column_translator
 #load data
 def load_projections():
     
-    df = pd.read_csv(os.path.join('data','ihme_compiled.csv'))
+    df = pd.read_csv(os.path.join('data','merged_projections.csv'))
     df = df[df.model_version != '2020_04_05.05.us']
 
     df['date'] = pd.to_datetime(df['date'])
     df['model_date'] = pd.to_datetime(df['model_version'].str[0:10].str.replace('_','-'))
     df['location_abbr'] = df['location_name'].map(us_state_abbrev)
-    df['model_name'] = 'IHME'
 
     return df
 
