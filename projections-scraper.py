@@ -17,6 +17,7 @@ import itertools
 import zipfile
 
 import reformat_cu_data as rcd
+from column_translater import lanl_to_ihme_translator
 
 def get_date_list(min_date):
     '''
@@ -121,8 +122,50 @@ def get_ihme_df():
         df['location_name'] = np.where(df['location_name'] == 'US', 'United States of America', df['location_name']) 
         df.to_csv(os.path.join('data','ihme_compiled.csv'), index=False)
 
+    return df
+
+def process_lanl_compiled(metric):
+    '''
+    process lanl datasets for merge 
+    '''
+    df = pd.read_csv(os.path.join('data',f'lanl_{metric}_compiled.csv'))
+
+    lanl_keep_cols = ['dates','state','q025','q50','q975','fcst_date'] #TODO: using 95% CI (97.5/2.5). Is this consistent with IHME?
+    lanl_index = [c for c in lanl_keep_cols if 'q' not in c]
+    df = df[lanl_keep_cols]
+    df.columns = [c if 'q' not in c else metric+'_'+c for c in df.columns] #add metric name to lanl data
+    df.set_index(lanl_index, inplace=True)
+    
+    return df
+
+def merge_projections():
+    '''
+    process and merge IHME / LANL data
+    '''
+
+    print('merging projection data...')
+    
+    #load and merge LANL deaths and confirmed case data
+    lanl_con = process_lanl_compiled('confirmed')
+    lanl_dea = process_lanl_compiled('deaths')
+
+    lanl = lanl_dea.merge(lanl_con, right_index=True, left_index=True).reset_index()
+    lanl.rename(columns=lanl_to_ihme_translator, inplace=True) #convert to IHME column names
+    lanl['model_name'] = 'LANL'
+
+    #load IHME data
+    ihme = pd.read_csv(os.path.join('data','ihme_compiled.csv'))
+    ihme = ihme[ihme.model_version != '2020_04_05.05.us']
+    ihme['model_name'] = 'IHME'
+
+    #concatenate IHME and LANL data
+    merged = pd.concat([ihme, lanl], axis=0, ignore_index=True)
+    merged.to_csv(os.path.join('data','merged_projections.csv'), index=False)
+
+    print('merged data:', merged.shape)
 
 if __name__ == "__main__":
     get_lanl_df()
     get_ihme_df()
     rcd.get_cu_df()
+    merge_projections()
