@@ -126,12 +126,13 @@ def get_cu_df():
 
             projection_df.to_csv('{d}{m}_{mv}.csv'.format(d=cu_dir, m=m, mv=mv))
             
-    # complete_projection_df = pd.concat(all_projection_dfs)
+    complete_projection_df = pd.concat(all_projection_dfs)
     # complete_projection_df.to_csv('complete_projection_df.csv', index=False)
+    return complete_projection_df
 
 
 def main():
-    get_cu_df()
+    complete_projection_df = get_cu_df()
 
 
 if __name__ == '__main__':

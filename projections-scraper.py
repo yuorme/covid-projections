@@ -167,5 +167,5 @@ def merge_projections():
 if __name__ == "__main__":
     get_lanl_df()
     get_ihme_df()
-    rcd.get_cu_df()
+    cu = rcd.get_cu_df()
     merge_projections()
