@@ -4,7 +4,7 @@
 # Generates human readable labels for IHME data column names
 # Adapted on definitions provided by the IHME in their readme.txt
 
-ihme_column_translator = {
+column_translator = {
     'date': 'Date',
     # mean
     'allbed_mean': 'All Beds Used (Mean)',
@@ -36,6 +36,10 @@ ihme_column_translator = {
     'totdea_upper': 'Cumulative Deaths (Upper)',
     'bedover_upper': 'All Beds Shortage (Upper)',
     'icuover_upper': 'ICU Beds Shortage (Upper)',
+    # lanl specific columns in ihme format
+    'confirmed_lower':'Confirmed Cases (Lower)',
+    'confirmed_mean':'Confirmed Cases (Mean)',
+    'confirmed_upper':'Confirmed Cases (Upper)'
 }
 
 lanl_to_ihme_translator = {
