@@ -159,7 +159,7 @@ def merge_projections():
 
     #concatenate IHME and LANL data
     merged = pd.concat([ihme, lanl], axis=0, ignore_index=True)
-    merged.to_csv(os.path.join('data','merged_projections.csv'))
+    merged.to_csv(os.path.join('data','merged_projections.csv'), index=False)
 
     print('merged data:', merged.shape)
 
