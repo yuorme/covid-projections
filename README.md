@@ -1,6 +1,8 @@
 # covid-projections
 COVID-19 Projections Data and Dashboard (https://www.covid-projections.com/)
 
+[![Gitter](https://badges.gitter.im/covid-projections-tracker/community.svg)](https://gitter.im/covid-projections-tracker/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
 ![COVID Projections Demo](assets/ihme_tracker_v1.gif)
 
 # Current Functionality
