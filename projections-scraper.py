@@ -29,38 +29,39 @@ def get_date_list(min_date):
         
     return date_list
 
-def get_lanl_df(metric='deaths', min_date='2020-04-04'):
+def get_lanl_df(min_date='2020-04-04'):
     '''
     download lanl projections and compiles into one csv file
     returns: None
     '''
     
     lanl_dates = get_date_list(min_date)
-    
+    lanl_metrics = ['deaths', 'confirmed']
+
     df_list = []
 
-    for date in lanl_dates:
+    for metric in lanl_metrics:
+        for date in lanl_dates:
         
-        url = f'https://covid-19.bsvgateway.org/forecast/us/files/{date}/{metric}/{date}_{metric}_quantiles_us.csv'
-        r = requests.get(url)
+            url = f'https://covid-19.bsvgateway.org/forecast/us/files/{date}/{metric}/{date}_{metric}_quantiles_us.csv'
+            r = requests.get(url)
+
+            if r.ok:
+                data = r.content.decode('utf8')
+                df = pd.read_csv(io.StringIO(data))
+                df['metric'] = metric
+                df_list.append(df)
+                print(f'lanl scraped {metric}: {date}')
+
+            time.sleep(0.2) #pause between requests
         
-        if r.ok:
-            data = r.content.decode('utf8')
-            df = pd.read_csv(io.StringIO(data))
-            df_list.append(df)
-            print(f'lanl scraped:{date}')
+        #merge and process data
+        if len(df_list) > 0:
+            df = pd.concat(df_list)
+            df.columns = [c.replace('.','') for c in df.columns] #remove periods in quantile colnames
+            df.to_csv(os.path.join('data', f'lanl_{metric}_compiled.csv'), index=False)
         else:
-            print(f'lanl no data:{date}')
-       
-        time.sleep(0.2) #pause between requests
-        
-    #merge and process data
-    if len(df_list) > 0:
-        df = pd.concat(df_list)
-        df.columns = [c.replace('.','') for c in df.columns] #remove periods in quantile colnames
-        df.to_csv(os.path.join('data','lanl_compiled.csv'), index=False)
-    else:
-        print('error: dataframe list is empty')
+            print('error: dataframe list is empty')
 
 def get_ihme_filelist():
     '''
