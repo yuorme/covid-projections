@@ -16,6 +16,8 @@ import re
 import itertools
 import zipfile
 
+from column translater import lanl_to_ihme_translator
+
 def get_date_list(min_date):
     '''
     generates list of dates from today backwards to min_date

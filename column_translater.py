@@ -38,4 +38,16 @@ ihme_column_translator = {
     'icuover_upper': 'ICU Beds Shortage (Upper)',
 }
 
+lanl_to_ihme_translator = {
+    'dates':'date',
+    'state':'location_name',
+    'fcst_date':'model_version',
+    'deaths_q05':'totdea_lower',
+    'deaths_q50':'totdea_mean',
+    'deaths_q95':'totdea_upper',
+    'confirmed_q05':'confirmed_lower',
+    'confirmed_q50':'confirmed_mean',
+    'confirmed_q95':'confirmed_upper'
+}
+
     
