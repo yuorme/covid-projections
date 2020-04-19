@@ -16,6 +16,8 @@ import re
 import itertools
 import zipfile
 
+import reformat_cu_data as rcd
+
 def get_date_list(min_date):
     '''
     generates list of dates from today backwards to min_date
@@ -123,3 +125,4 @@ def get_ihme_df():
 if __name__ == "__main__":
     get_lanl_df()
     get_ihme_df()
+    rcd.get_cu_df()
