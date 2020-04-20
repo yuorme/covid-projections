@@ -304,15 +304,18 @@ def build_cards(dff, metric, model):
 
     #latest data
     latest_version = dff.model_date.max()
-    proj_latest = dff[(dff.model_date == latest_version)][metric].max()
-    proj_latest_model = dff[dff.model_date == latest_version]['model_version'].unique()[0]
+    #TODO: Maybe add cards for latest versions of LANL and IHME
+    dff_latest = dff[(dff.model_date == latest_version)]
+    proj_latest = dff_latest[metric].max()
+    proj_latest_model = dff_latest['model_version'].unique()[0]
 
     #historical max and mins
-    version_max = dff.groupby('model_version')[metric].max()
+    version_max = dff.groupby(['model_name','model_version'])[metric].max()
     proj_max = np.max(version_max)
     proj_min = np.min(version_max)
-    proj_max_model = version_max.index[np.argmax(version_max)]
-    proj_min_model = version_max.index[np.argmin(version_max)]
+    #model labels
+    proj_max_model = '-'.join(version_max.index[np.argmax(version_max)])
+    proj_min_model = '-'.join(version_max.index[np.argmin(version_max)])
     
     
     cards = [
@@ -321,7 +324,7 @@ def build_cards(dff, metric, model):
                 dbc.CardHeader([html.H5(f"Projected Peak - Latest", className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
                 dbc.CardBody([
                     html.H2(f'{int(proj_latest)}', className='card-text'),
-                    html.P(f'{model} Version: {proj_latest_model}', className='card-text'),
+                    html.P(f'{proj_latest_model}', className='card-text'),
                 ])
             ], color="info", outline=True)
         ]),
@@ -330,7 +333,7 @@ def build_cards(dff, metric, model):
                 dbc.CardHeader([html.H5(f"Projected Peak - Maximum", className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
                 dbc.CardBody([
                     html.H2(f'{int(proj_max)}', className='card-text'),
-                    html.P(f'{model} Version: {proj_max_model}', className='card-text'),
+                    html.P(f'{proj_max_model}', className='card-text'),
                 ])
             ], color="danger", outline=True)
         ]),
@@ -339,7 +342,7 @@ def build_cards(dff, metric, model):
                 dbc.CardHeader([html.H5("Projected Peak - Minimum", className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
                 dbc.CardBody([
                     html.H2(f'{int(proj_min)}', className='card-text'),
-                    html.P(f'{model} Version: {proj_min_model}', className='card-text'),
+                    html.P(f'{proj_min_model}', className='card-text'),
                 ])
             ], color="success", outline=True)
         ]),
