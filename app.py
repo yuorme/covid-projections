@@ -16,7 +16,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 from region_abbreviations import us_state_abbrev
-from column_translater import ihme_column_translator
+from column_translater import column_translator
 
 
 #load data
@@ -32,15 +32,20 @@ def load_projections():
     return df
 
 def filter_df(df, model, location, metric, start_date, end_date):
+
     dff = df.copy()
+
     dff = dff[
         (dff.location_name == location) & 
-        (dff.model_name == model) &
+        (dff.model_name.isin(model)) &
         (dff.model_date >= start_date) &
         (dff.model_date <= end_date) & 
         (dff.date > '2020-02-15') &
         (dff.date < '2020-07-15')
         ]
+
+    dff['model_label'] = dff['model_name'] + '-' + dff['model_date'].dt.strftime("%m/%d").str[1:]
+
     return dff
 
 df = load_projections()
@@ -110,16 +115,32 @@ collapse_plot_options = html.Div(
                         ),
                         dbc.FormGroup( #TODO: Fix Top and Left margins to align 
                             [
-                                dbc.Label("Color"),
+                                dbc.Label("IHME Color"),
                                 dbc.Col(
                                     dcc.Dropdown(
-                                        id="color-dropdown",
+                                        id="ihme-color-dropdown",
                                         options=[
                                             # TODO could we maybe add color swatches for the color scales?
                                             # Doesn't seem possible with dbc Dropdown because labels can only be strings
                                             {'label' : row[ 0 ], 'value' : row[ 0 ]} for row in style_lists
                                         ],
                                         value = "tempo"
+                                    ),
+                                ),
+                            ],
+                        ),
+                        dbc.FormGroup( #TODO: Fix Top and Left margins to align 
+                            [
+                                dbc.Label("LANL Color"),
+                                dbc.Col(
+                                    dcc.Dropdown(
+                                        id="lanl-color-dropdown",
+                                        options=[
+                                            # TODO could we maybe add color swatches for the color scales?
+                                            # Doesn't seem possible with dbc Dropdown because labels can only be strings
+                                            {'label' : row[ 0 ], 'value' : row[ 0 ]} for row in style_lists
+                                        ],
+                                        value = "amp"
                                     ),
                                 ),
                             ],
@@ -140,9 +161,10 @@ controls = dbc.Card(
                 dcc.Dropdown(
                     id="model-dropdown",
                     options=[
-                        {"label": col, "value": col} for col in ['IHME']
+                        {"label": col, "value": col} for col in ['IHME','LANL']
                     ],
-                    value="IHME",
+                    value=['IHME','LANL'],
+                    multi=True
                 ),
             ]
         ),
@@ -164,7 +186,7 @@ controls = dbc.Card(
                 dcc.Dropdown(
                     id="metric-dropdown",
                     options=[
-                        {"label": ihme_column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.tolist()
+                        {"label": column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.tolist()
                     ],
                     value="totdea_mean",
                 ),
@@ -276,11 +298,11 @@ def toggle_collapse(n, is_open):
 
 def build_cards(dff, metric, model):
 
-    metric_name = ihme_column_translator[metric]
+    metric_name = column_translator[metric]
 
     #latest data
     latest_version = dff.model_date.max()
-    proj_latest = dff[dff.model_date == latest_version][metric].max()
+    proj_latest = dff[(dff.model_date == latest_version)][metric].max()
     proj_latest_model = dff[dff.model_date == latest_version]['model_version'].unique()[0]
 
     #historical max and mins
@@ -333,7 +355,7 @@ def build_cards(dff, metric, model):
         Input("model-date-picker", "end_date")
     ],
 )
-def make_primary_graph(model, location, metric, start_date, end_date):
+def make_stat_cards(model, location, metric, start_date, end_date):
     '''Callback for the historical projections stats cards
     '''
     dff = filter_df(df, model, location, metric, start_date, end_date)
@@ -349,20 +371,29 @@ def make_primary_graph(model, location, metric, start_date, end_date):
         Input("model-date-picker", "start_date"),
         Input("model-date-picker", "end_date"),
         Input("log-scale-toggle", "value"),
-        Input("color-dropdown", "value")
+        Input("ihme-color-dropdown", "value"),
+        Input("lanl-color-dropdown", "value")
     ],
 
 )
-def make_primary_graph(model, location, metric, start_date, end_date, log_scale, color_scale_name):
+def make_primary_graph(model, location, metric, start_date, end_date, log_scale, color_scale_ihme, color_scale_lanl):
     '''Callback for the primary historical projections line chart
     '''
     dff = filter_df(df, model, location, metric, start_date, end_date)
 
-    dff['model_label'] = dff['model_date'].dt.strftime("%m/%d").str[1:]
+    model_title = ' & '.join(model)
 
-    plot_title = f'{model} - {location} - {ihme_column_translator[metric]}'
-    num_models = len(dff.model_version.unique())
-    sequential_color_scale = getattr(px.colors.sequential,color_scale_name)
+    plot_title = f'{model_title} - {location} - {column_translator[metric]}'
+
+    #different sequential colorscales for different models    
+    num_models_ihme = len(dff[dff.model_name == 'IHME'].model_version.unique())
+    num_models_lanl = len(dff[dff.model_name == 'LANL'].model_version.unique())
+
+    ihme_color_scale = getattr(px.colors.sequential, color_scale_ihme)
+    ihme_color_scale = ihme_color_scale[len(ihme_color_scale)-num_models_ihme:]
+
+    lanl_color_scale = getattr(px.colors.sequential, color_scale_lanl)
+    lanl_color_scale = lanl_color_scale[len(lanl_color_scale)-num_models_lanl:]
 
     # Change y-axis scale depending on toggle value
     y_axis_type = ("log" if log_scale else "-")
@@ -374,9 +405,9 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
         x='date',
         y=metric,
         color='model_label',
-        color_discrete_sequence=sequential_color_scale[len(sequential_color_scale)-num_models:],
+        color_discrete_sequence=ihme_color_scale + lanl_color_scale,
         title=plot_title,
-        labels=ihme_column_translator,
+        labels=column_translator,
         hover_name='model_version',
         hover_data=['model_name']
     )
@@ -412,4 +443,4 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     return fig
 
 if __name__ == "__main__":
-    app.run_server(debug=False, port=5000)
+    app.run_server(debug=True, port=5000)
