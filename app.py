@@ -230,7 +230,7 @@ plotly_config = dict(
 app.layout = dbc.Container(
     [
         dbc.NavbarSimple(brand=title, color="primary", dark=True),
-        html.Div(dbc.Alert("Historical model projections for a given country or region (currently only supports IHME projections)", color="primary", id='alert')),
+        html.Div(dbc.Alert("Historical model projections for a given country or region (currently supports IHME and LANL projections)", color="primary", id='alert')),
         html.Hr(),
         dbc.Row(
             [
