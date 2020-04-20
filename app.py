@@ -307,15 +307,15 @@ def build_cards(dff, metric, model):
     #TODO: Maybe add cards for latest versions of LANL and IHME
     dff_latest = dff[(dff.model_date == latest_version)]
     proj_latest = dff_latest[metric].max()
-    proj_latest_model = dff_latest['model_version'].unique()[0]
+    proj_latest_model = dff_latest['model_name'].unique()[0]+' - '+dff_latest['model_version'].unique()[0]
 
     #historical max and mins
     version_max = dff.groupby(['model_name','model_version'])[metric].max()
     proj_max = np.max(version_max)
     proj_min = np.min(version_max)
     #model labels
-    proj_max_model = '-'.join(version_max.index[np.argmax(version_max)])
-    proj_min_model = '-'.join(version_max.index[np.argmin(version_max)])
+    proj_max_model = ' - '.join(version_max.index[np.argmax(version_max)])
+    proj_min_model = ' - '.join(version_max.index[np.argmin(version_max)])
     
     
     cards = [
