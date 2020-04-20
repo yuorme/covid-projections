@@ -46,9 +46,9 @@ lanl_to_ihme_translator = {
     'dates':'date',
     'state':'location_name',
     'fcst_date':'model_version',
-    'deaths_q025':'deaths_lower',
-    'deaths_q50':'deaths_mean',
-    'deaths_q975':'deaths_upper',
+    'deaths_q025':'totdea_lower',
+    'deaths_q50':'totdea_mean',
+    'deaths_q975':'totdea_upper',
     'confirmed_q025':'confirmed_lower',
     'confirmed_q50':'confirmed_mean',
     'confirmed_q975':'confirmed_upper'
