@@ -44,6 +44,8 @@ def filter_df(df, model, location, metric, start_date, end_date):
         (dff.date < '2020-07-15')
         ]
 
+    dff.dropna(subset=[metric], inplace=True)
+
     dff['model_label'] = dff['model_name'] + '-' + dff['model_date'].dt.strftime("%m/%d").str[1:]
 
     return dff
@@ -186,7 +188,7 @@ controls = dbc.Card(
                 dcc.Dropdown(
                     id="metric-dropdown",
                     options=[
-                        {"label": column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.tolist()
+                        {"label": column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.sort_values().tolist() #TODO: Might be nice if metrics were sorted alphabetically by label rather than column names
                     ],
                     value="totdea_mean",
                 ),
@@ -443,4 +445,4 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     return fig
 
 if __name__ == "__main__":
-    app.run_server(debug=True, port=5000)
+    app.run_server(debug=False, port=5000)
