@@ -40,9 +40,10 @@ def get_lanl_df(min_date='2020-04-04'):
     lanl_dates = get_date_list(min_date)
     lanl_metrics = ['deaths', 'confirmed']
 
-    df_list = []
-
     for metric in lanl_metrics:
+
+        df_list = []
+        
         for date in lanl_dates:
         
             url = f'https://covid-19.bsvgateway.org/forecast/us/files/{date}/{metric}/{date}_{metric}_quantiles_us.csv'
@@ -130,15 +131,17 @@ def process_lanl_compiled(metric):
     df = pd.read_csv(os.path.join('data',f'lanl_{metric}_compiled.csv'))
 
     lanl_keep_cols = ['dates','state','q025','q50','q975','fcst_date'] #TODO: using 95% CI (97.5/2.5). Is this consistent with IHME?
-    lanl_index = [c for c in lanl_keep_cols if 'q' not in c]
-    lanl_metrics = [c for c in lanl_keep_cols if 'q' in c]
+    lanl_index = ['fcst_date','state','dates']
+    lanl_metrics = [c for c in lanl_keep_cols if 'q' == c[0]]
     lanl_metrics_diff = [c+'_diff' for c in lanl_metrics]
     df = df[lanl_keep_cols]
 
-    df = df.groupby(lanl_index).max() #HACK: to temporarily solve Issue #29
+    # df = df.groupby(lanl_index).max() #HACK: to temporarily solve Issue #29
 
-    df = df.sort_values(['fcst_date','state','dates']).reset_index() #sort to allow diff
-    df[lanl_metrics_diff] =  df.sort_values(['fcst_date','state','dates'])[lanl_metrics].diff()
+    df = df.sort_values(lanl_index).reset_index(drop=True) #sort to allow diff
+    df[lanl_metrics_diff] =  df.sort_values(lanl_index)[lanl_metrics].diff()
+
+    print(df.info())
 
     #replace negative values caused by the diff crossing over states
     for c in lanl_metrics_diff:
@@ -176,6 +179,6 @@ def merge_projections():
     print('merged data:', merged.shape)
 
 if __name__ == "__main__":
-    get_lanl_df()
-    get_ihme_df()
+    # get_lanl_df()
+    # get_ihme_df()
     merge_projections()
