@@ -11,37 +11,44 @@ import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
+from flask_talisman import Talisman
 
 import plotly.graph_objects as go
 import plotly.express as px
 
 from region_abbreviations import us_state_abbrev
-from column_translater import ihme_column_translator
+from column_translater import column_translator
 
 
 #load data
 def load_projections():
     
-    df = pd.read_csv(os.path.join('data','ihme_compiled.csv'))
+    df = pd.read_csv(os.path.join('data','merged_projections.csv'))
     df = df[df.model_version != '2020_04_05.05.us']
 
     df['date'] = pd.to_datetime(df['date'])
     df['model_date'] = pd.to_datetime(df['model_version'].str[0:10].str.replace('_','-'))
     df['location_abbr'] = df['location_name'].map(us_state_abbrev)
-    df['model_name'] = 'IHME'
 
     return df
 
 def filter_df(df, model, location, metric, start_date, end_date):
+
     dff = df.copy()
+
     dff = dff[
         (dff.location_name == location) & 
-        (dff.model_name == model) &
+        (dff.model_name.isin(model)) &
         (dff.model_date >= start_date) &
         (dff.model_date <= end_date) & 
         (dff.date > '2020-02-15') &
         (dff.date < '2020-07-15')
         ]
+
+    dff.dropna(subset=[metric], inplace=True)
+
+    dff['model_label'] = dff['model_name'] + '-' + dff['model_date'].dt.strftime("%m/%d").str[1:]
+
     return dff
 
 df = load_projections()
@@ -82,7 +89,19 @@ app = dash.Dash(
 )
 title = 'COVID Projections Tracker'
 app.title = title
-server = app.server
+server = app.server # why do we assign this here?
+
+
+csp = {
+       'default-src': [
+        '\'self\'',
+        'cdnjs.cloudflare.com', # font awesome icons
+        'stackpath.bootstrapcdn.com', # bootstrap
+        ]
+      }
+
+Talisman(app.server, content_security_policy=csp, force_https=True)
+
 
 collapse_plot_options = html.Div(
             [
@@ -111,16 +130,32 @@ collapse_plot_options = html.Div(
                         ),
                         dbc.FormGroup( #TODO: Fix Top and Left margins to align 
                             [
-                                dbc.Label("Color"),
+                                dbc.Label("IHME Color"),
                                 dbc.Col(
                                     dcc.Dropdown(
-                                        id="color-dropdown",
+                                        id="ihme-color-dropdown",
                                         options=[
                                             # TODO could we maybe add color swatches for the color scales?
                                             # Doesn't seem possible with dbc Dropdown because labels can only be strings
                                             {'label' : row[ 0 ], 'value' : row[ 0 ]} for row in style_lists
                                         ],
                                         value = "tempo"
+                                    ),
+                                ),
+                            ],
+                        ),
+                        dbc.FormGroup( #TODO: Fix Top and Left margins to align 
+                            [
+                                dbc.Label("LANL Color"),
+                                dbc.Col(
+                                    dcc.Dropdown(
+                                        id="lanl-color-dropdown",
+                                        options=[
+                                            # TODO could we maybe add color swatches for the color scales?
+                                            # Doesn't seem possible with dbc Dropdown because labels can only be strings
+                                            {'label' : row[ 0 ], 'value' : row[ 0 ]} for row in style_lists
+                                        ],
+                                        value = "amp"
                                     ),
                                 ),
                             ],
@@ -141,9 +176,10 @@ controls = dbc.Card(
                 dcc.Dropdown(
                     id="model-dropdown",
                     options=[
-                        {"label": col, "value": col} for col in ['IHME']
+                        {"label": col, "value": col} for col in ['IHME','LANL']
                     ],
-                    value="IHME",
+                    value=['IHME','LANL'],
+                    multi=True
                 ),
             ]
         ),
@@ -165,7 +201,7 @@ controls = dbc.Card(
                 dcc.Dropdown(
                     id="metric-dropdown",
                     options=[
-                        {"label": ihme_column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.tolist()
+                        {"label": column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.sort_values().tolist() #TODO: Might be nice if metrics were sorted alphabetically by label rather than column names
                     ],
                     value="totdea_mean",
                 ),
@@ -193,21 +229,29 @@ plotly_config = dict(
     scrollZoom = True,
     displaylogo= False,
     showLink = False,
+    toImageButtonOptions={
+        'format':'png',
+        'filename':'covid-projections',
+        #twitter optimized 16:9 size
+        'width':1200,
+        'height':675
+    },
     modeBarButtonsToRemove = [
-    'sendDataToCloud',
-    'zoomIn2d',
-    'zoomOut2d',
-    'hoverClosestCartesian',
-    'hoverCompareCartesian',
-    'hoverClosest3d',
-    'hoverClosestGeo',
-    'resetScale2d']
+        'sendDataToCloud',
+        'zoomIn2d',
+        'zoomOut2d',
+        'hoverClosestCartesian',
+        'hoverCompareCartesian',
+        'hoverClosest3d',
+        'hoverClosestGeo',
+        'resetScale2d'
+    ],
 )
 
 app.layout = dbc.Container(
     [
         dbc.NavbarSimple(brand=title, color="primary", dark=True),
-        html.Div(dbc.Alert("Historical model projections for a given country or region (currently only supports IHME projections)", color="primary", id='alert')),
+        html.Div(dbc.Alert("Historical model projections for a given country or region (currently supports IHME and LANL projections)", color="primary", id='alert')),
         html.Hr(),
         dbc.Row(
             [
@@ -277,23 +321,23 @@ def toggle_collapse(n, is_open):
 
 def build_cards(dff, metric, model):
 
-    metric_name = ihme_column_translator[metric]
+    metric_name = column_translator[metric]
 
     #latest data
     latest_version = dff.model_date.max()
-    proj_latest = dff[dff.model_date == latest_version][metric].max()
-    proj_latest_model = dff[dff.model_date == latest_version]['model_version'].unique()[0]
-    proj_latest_date = dff.loc[dff[dff.model_version == proj_latest_model][metric].idxmax()]['date']
+    #TODO: Maybe add cards for latest versions of LANL and IHME
+    dff_latest = dff[(dff.model_date == latest_version)]
+    proj_latest = dff_latest[metric].max()
+    proj_latest_model = dff_latest['model_name'].unique()[0]+' - '+dff_latest['model_version'].unique()[0]
 
     #historical max and mins
-    version_max = dff.groupby('model_version')[metric].max()
+    version_max = dff.groupby(['model_name','model_version'])[metric].max()
     proj_max = np.max(version_max)
     proj_min = np.min(version_max)
-    proj_max_model = version_max.index[np.argmax(version_max)]
-    proj_min_model = version_max.index[np.argmin(version_max)]
-
-    proj_max_date = dff.loc[dff[dff.model_version == proj_max_model][metric].idxmax()]['date']
-    proj_min_date = dff.loc[dff[dff.model_version == proj_min_model][metric].idxmax()]['date']
+    #model labels
+    proj_max_model = ' - '.join(version_max.index[np.argmax(version_max)])
+    proj_min_model = ' - '.join(version_max.index[np.argmin(version_max)])
+    
     
     cards = [
         dbc.Col([
@@ -301,27 +345,16 @@ def build_cards(dff, metric, model):
                 dbc.CardHeader([html.H5(f"Projected Peak - Latest", className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
                 dbc.CardBody([
                     html.H2(f'{int(proj_latest)}', className='card-text'),
-                    html.H5(f'Date of Projected Peak: {proj_latest_date.strftime("%m/%d/%Y")}'),
-                    html.P(f'{model} Version: {proj_latest_model}', className='card-text'),
+                    html.P(f'{proj_latest_model}', className='card-text'),
                 ])
             ], color="info", outline=True)
         ]),
-        # dbc.Col([
-        #     dbc.Card([
-        #         dbc.CardHeader([html.H5(f"Date of Projected Peak - Latest", className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
-        #         dbc.CardBody([
-        #             html.H3(f'{proj_latest_date.strftime("%m/%d/%Y")}', className='card-text'),
-        #             # html.P(f'{model} Version: {proj_latest_model}', className='card-text'),
-        #         ])
-        #     ], color="info", outline=True)
-        # ]),
         dbc.Col([
             dbc.Card([
                 dbc.CardHeader([html.H5(f"Projected Peak - Maximum", className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
                 dbc.CardBody([
                     html.H2(f'{int(proj_max)}', className='card-text'),
-                    html.H5(f'Date of Projected Peak: {proj_max_date.strftime("%m/%d/%Y")}'),
-                    html.P(f'{model} Version: {proj_max_model}', className='card-text'),
+                    html.P(f'{proj_max_model}', className='card-text'),
                 ])
             ], color="danger", outline=True)
         ]),
@@ -330,12 +363,10 @@ def build_cards(dff, metric, model):
                 dbc.CardHeader([html.H5("Projected Peak - Minimum", className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
                 dbc.CardBody([
                     html.H2(f'{int(proj_min)}', className='card-text'),
-                    html.H5(f'Date of Projected Peak: {proj_min_date.strftime("%m/%d/%Y")}'),
-                    html.P(f'{model} Version: {proj_min_model}', className='card-text'),
+                    html.P(f'{proj_min_model}', className='card-text'),
                 ])
             ], color="success", outline=True)
         ]),
-
     ]
 
     return cards
@@ -350,7 +381,7 @@ def build_cards(dff, metric, model):
         Input("model-date-picker", "end_date")
     ],
 )
-def make_primary_graph(model, location, metric, start_date, end_date):
+def make_stat_cards(model, location, metric, start_date, end_date):
     '''Callback for the historical projections stats cards
     '''
     dff = filter_df(df, model, location, metric, start_date, end_date)
@@ -366,20 +397,29 @@ def make_primary_graph(model, location, metric, start_date, end_date):
         Input("model-date-picker", "start_date"),
         Input("model-date-picker", "end_date"),
         Input("log-scale-toggle", "value"),
-        Input("color-dropdown", "value")
+        Input("ihme-color-dropdown", "value"),
+        Input("lanl-color-dropdown", "value")
     ],
 
 )
-def make_primary_graph(model, location, metric, start_date, end_date, log_scale, color_scale_name):
+def make_primary_graph(model, location, metric, start_date, end_date, log_scale, color_scale_ihme, color_scale_lanl):
     '''Callback for the primary historical projections line chart
     '''
     dff = filter_df(df, model, location, metric, start_date, end_date)
 
-    dff['model_label'] = dff['model_date'].dt.strftime("%m/%d").str[1:]
+    model_title = ' & '.join(model)
 
-    plot_title = f'{model} - {location} - {ihme_column_translator[metric]}'
-    num_models = len(dff.model_version.unique())
-    sequential_color_scale = getattr(px.colors.sequential,color_scale_name)
+    plot_title = f'{model_title} - {location} - {column_translator[metric]}'
+
+    #different sequential colorscales for different models    
+    num_models_ihme = len(dff[dff.model_name == 'IHME'].model_version.unique())
+    num_models_lanl = len(dff[dff.model_name == 'LANL'].model_version.unique())
+
+    ihme_color_scale = getattr(px.colors.sequential, color_scale_ihme)
+    ihme_color_scale = ihme_color_scale[len(ihme_color_scale)-num_models_ihme:]
+
+    lanl_color_scale = getattr(px.colors.sequential, color_scale_lanl)
+    lanl_color_scale = lanl_color_scale[len(lanl_color_scale)-num_models_lanl:]
 
     # Change y-axis scale depending on toggle value
     y_axis_type = ("log" if log_scale else "-")
@@ -391,9 +431,9 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
         x='date',
         y=metric,
         color='model_label',
-        color_discrete_sequence=sequential_color_scale[len(sequential_color_scale)-num_models:],
+        color_discrete_sequence=ihme_color_scale + lanl_color_scale,
         title=plot_title,
-        labels=ihme_column_translator,
+        labels=column_translator,
         hover_name='model_version',
         hover_data=['model_name']
     )
