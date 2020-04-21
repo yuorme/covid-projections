@@ -1,8 +1,34 @@
+import urllib
+from bs4 import BeautifulSoup
 import pandas as pd
-import numpy as np
 import datetime
-import os
-# from plotnine import *
+
+
+def get_tbody(soup):
+    tbodys = soup.findAll('tbody')
+    if len(tbodys) != 1:
+        raise Exception('Unexpected number of tbody elements')
+    tbody = tbodys[0]
+    return tbody
+
+
+def get_projection_directory_hrefs():
+    fp = urllib.request.urlopen("https://github.com/shaman-lab/COVID-19Projection")
+    soup = BeautifulSoup(fp)
+
+    tbody = get_tbody(soup)
+
+    rows = tbody.findAll('tr', {'class': 'js-navigation-item'})
+
+    directory_rows = [row for row in rows if row.find('td', {'class': 'icon'}).find('svg', {'aria-label': 'directory'}) is not None]
+
+    directory_hrefs = [
+        directory_row.find(
+            'td', {'class': 'content'}).find(
+            'a', {'class': 'js-navigation-open'}).attrs['href'] for 
+        directory_row in directory_rows]
+    projection_directory_hrefs = [h for h in directory_hrefs if 'Projection_' in h]
+    return projection_directory_hrefs
 
 
 def get_model_version(model_version_subdir, y=2020):
@@ -11,29 +37,13 @@ def get_model_version(model_version_subdir, y=2020):
     return model_version_string
 
 
-# def plot_metric_by_date(df, metric):
-    # metric_by_date = df.groupby(['date'], as_index=False)[metric].sum().sort_values(
-    #     ['date']).reset_index(drop=True)
-    # metric_by_date['x'] = np.arange(len(metric_by_date))
-    # p = (ggplot(metric_by_date, aes('x', metric)) + geom_line())
-    # return p
-
-
-def get_projection_df_for_model_type(model_type, model_version_subdir, latest_projection_dir, quant_convention_dict, naming_convention_dict, compiled_df):
-    model_fs = [f for f in os.listdir(latest_projection_dir) if '.csv' in f and model_type in f]
-    bed_fs = [f for f in model_fs if 'bed_' in f]
-    projection_fs = [f for f in model_fs if 'Projection_' in f]
-    if len(bed_fs) != 1 or len(projection_fs) != 1:
-        print('model_type {mt} not found'.format(mt=model_type))
-        return None
-    bed_f = bed_fs[0]
-    projection_f = projection_fs[0]
-
-    bed_df = pd.read_csv(latest_projection_dir + '/' + bed_f, encoding = "ISO-8859-1")
-    projection_df = pd.read_csv(latest_projection_dir + '/' + projection_f, encoding = "ISO-8859-1")
-    # bed_df = pd.read_csv(latest_projection_dir + '/' + bed_f)
-    # projection_df = pd.read_csv(latest_projection_dir + '/' + projection_f)
-
+def get_projection_df_from_hrefs(bed_href, projection_href, quant_convention_dict, naming_convention_dict, compiled_df, model_version_subdir):
+    bed_df = pd.read_csv(
+        'https://raw.githubusercontent.com/{}'.format(bed_href).replace('blob', ''),
+        encoding='latin_1')
+    projection_df = pd.read_csv(
+        'https://raw.githubusercontent.com/{}'.format(projection_href).replace('blob', ''),
+        encoding='latin_1')
     bed_df['county'] = bed_df['county'].astype(str)
     bed_df['Date'] = bed_df['Date'].astype(str)
 
@@ -78,15 +88,15 @@ def get_projection_df_for_model_type(model_type, model_version_subdir, latest_pr
 
     projection_df = projection_df.rename(columns=rename_dict)
     projection_df = projection_df[[c for c in compiled_df.columns if c in projection_df.columns] + ['fips', 'state']]
-    return projection_df
+    return projection_df    
 
 
 def get_cu_df():
     naming_convention_dict = {
-            'ICU_need': 'ICUbed',
-            'death': 'totdea',
-            'hosp_need': 'allbed',
-            'vent_need': 'InvVen'}
+        'ICU_need': 'ICUbed',
+        'death': 'totdea',
+        'hosp_need': 'allbed',
+        'vent_need': 'InvVen'}
 
     quant_convention_dict = {
         '50': 'mean',
@@ -100,24 +110,39 @@ def get_cu_df():
     print('    {}'.format(naming_convention_dict))
 
     cu_dir = 'data/cu_shaman/'
-    cu_dir_original_format = '{}original_format/'.format(cu_dir)
-
     compiled_df = pd.read_csv('data/ihme_compiled.csv')
 
     all_projection_dfs = []
-    model_version_subdirs = [f for f in os.listdir(cu_dir_original_format) if 'Projection_' in f and '_March13' not in f] # March13 ignored because model format is not equivalent
-    for model in ['nointerv', '80contact', '75contact', '70contact', '60contact', '50contact']:
-        print(model)
-        for model_version_subdir in model_version_subdirs:
-            print(model_version_subdir)
-            
-            # cu_subdirs = os.listdir(cu_dir_original_format)
-            latest_projection_dir = cu_dir_original_format + model_version_subdir
-            # sub_dirs = [f for f in os.listdir(latest_projection_dir) if not os.path.isfile(latest_projection_dir + f)]
-            # print('sub_directories: {}'.format(sub_dirs))
-            projection_df = get_projection_df_for_model_type(model, model_version_subdir, latest_projection_dir, quant_convention_dict, naming_convention_dict, compiled_df)
-            if projection_df is None:
-                continue
+    projection_directory_hrefs = get_projection_directory_hrefs()
+    for projection_directory_href in projection_directory_hrefs:
+        print("https://github.com" + projection_directory_href)
+        model_version_subdir = projection_directory_href.split('/')[-1]
+        fp = urllib.request.urlopen("https://github.com" + projection_directory_href)
+        soup = BeautifulSoup(fp)
+        tbody = get_tbody(soup)
+        rows = tbody.findAll('tr', {'class': 'js-navigation-item'})
+        icons = [e.find('td', {'class': 'icon'}) for e in rows]
+
+        file_rows = [row for row in rows if row.find(
+            'td', {'class': 'icon'}).find(
+            'svg', {'aria-label': 'file'}) is not None]
+
+        file_hrefs = [
+            file_row.find(
+                'td', {'class': 'content'}).find(
+                'a', {'class': 'js-navigation-open'}).attrs['href'] for 
+            file_row in file_rows]
+
+        bed_hrefs = sorted([f for f in file_hrefs if 'bed_' in f and 'csv' in f])
+        projection_hrefs = sorted([f for f in file_hrefs if 'Projection_' in f.split('/')[-1] and 'csv' in f])
+        if [e.split('/')[-1].replace('bed_', '') for e in bed_hrefs] != [e.split('/')[-1].replace('Projection_', '') for e in projection_hrefs]:
+            print('Number of bed files do not match number of projection files. Skipping.')
+            continue
+        print(model_version_subdir)
+        for bed_href, projection_href in zip(bed_hrefs, projection_hrefs):
+            model = bed_href.split('/')[-1].replace('bed_', '').replace('.csv', '')
+            print(model)
+            projection_df = get_projection_df_from_hrefs(bed_href, projection_href, quant_convention_dict, naming_convention_dict, compiled_df, model_version_subdir)
             projection_df['model'] = 'CU_shamanlab_' + model
             all_projection_dfs.append(projection_df)
 
@@ -125,9 +150,7 @@ def get_cu_df():
             mv = projection_df['model_version'].iloc[0]
 
             projection_df.to_csv('{d}{m}_{mv}.csv'.format(d=cu_dir, m=m, mv=mv))
-            
     complete_projection_df = pd.concat(all_projection_dfs)
-    # complete_projection_df.to_csv('complete_projection_df.csv', index=False)
     return complete_projection_df
 
 
