@@ -216,15 +216,21 @@ plotly_config = dict(
     scrollZoom = True,
     displaylogo= False,
     showLink = False,
+    toImageButtonOptions={
+        'filename':'covid-projections.png',
+        'width':1200,
+        'height':675
+    },
     modeBarButtonsToRemove = [
-    'sendDataToCloud',
-    'zoomIn2d',
-    'zoomOut2d',
-    'hoverClosestCartesian',
-    'hoverCompareCartesian',
-    'hoverClosest3d',
-    'hoverClosestGeo',
-    'resetScale2d']
+        'sendDataToCloud',
+        'zoomIn2d',
+        'zoomOut2d',
+        'hoverClosestCartesian',
+        'hoverCompareCartesian',
+        'hoverClosest3d',
+        'hoverClosestGeo',
+        'resetScale2d'
+    ],
 )
 
 app.layout = dbc.Container(
