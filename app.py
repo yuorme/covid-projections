@@ -217,7 +217,9 @@ plotly_config = dict(
     displaylogo= False,
     showLink = False,
     toImageButtonOptions={
-        'filename':'covid-projections.png',
+        'format':'png'
+        'filename':'covid-projections',
+        #twitter optimized 16:9 size
         'width':1200,
         'height':675
     },
