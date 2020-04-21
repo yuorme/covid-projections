@@ -136,12 +136,8 @@ def process_lanl_compiled(metric):
     lanl_metrics_diff = [c+'_diff' for c in lanl_metrics]
     df = df[lanl_keep_cols]
 
-    # df = df.groupby(lanl_index).max() #HACK: to temporarily solve Issue #29
-
     df = df.sort_values(lanl_index).reset_index(drop=True) #sort to allow diff
     df[lanl_metrics_diff] =  df.sort_values(lanl_index)[lanl_metrics].diff()
-
-    print(df.info())
 
     #replace negative values caused by the diff crossing over states
     for c in lanl_metrics_diff:
@@ -179,6 +175,6 @@ def merge_projections():
     print('merged data:', merged.shape)
 
 if __name__ == "__main__":
-    # get_lanl_df()
-    # get_ihme_df()
+    get_lanl_df()
+    get_ihme_df()
     merge_projections()
