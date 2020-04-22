@@ -92,25 +92,8 @@ app.title = title
 server = app.server # why do we assign this here?
 
 
-
-# csp = {
-#        'default-src': [
-#         '\'self\'',
-#         'cdnjs.cloudflare.com', # font awesome icons
-#         'stackpath.bootstrapcdn.com', # bootstrap
-#         ]
-#       }
-csp = {
-       'default-src': ['\'self\'',
-                       'cdnjs.cloudflare.com', # font awesome icons
-                       'stackpath.bootstrapcdn.com', # bootstrap
-                       ],
-        'script-src': ['\'self\'', '\'unsafe-eval\''],
-       'style-src': ['\'self\'', '\'unsafe-inline\''],
-      }
-
-
-Talisman(app.server, content_security_policy=None, force_https=False)
+# This forces https for the site
+Talisman(app.server, content_security_policy=None)
 
 
 collapse_plot_options = html.Div(
