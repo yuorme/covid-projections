@@ -21,13 +21,35 @@ from column_translater import column_translator
 
 #load data
 def load_projections():
+
+    df = pd.read_csv(os.path.join('data','merged_projections.csv'), nrows=50)
     
-    df = pd.read_csv(os.path.join('data','merged_projections.csv'))
+    dtypes = [
+        'category','str',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'category','category',
+        'float32','float32','float32',
+        'float32','float32','float32',
+    ]
+
+    pd_dtypes = dict(zip(df.columns, dtypes))
+
+    df = pd.read_csv(os.path.join('data','merged_projections.csv'), dtype=pd_dtypes)
     df = df[df.model_version != '2020_04_05.05.us']
 
     df['date'] = pd.to_datetime(df['date'])
     df['model_date'] = pd.to_datetime(df['model_version'].str[0:10].str.replace('_','-'))
     df['location_abbr'] = df['location_name'].map(us_state_abbrev)
+
+    print('final mem usage:', df.info(memory_usage='deep'))
 
     return df
 
@@ -46,11 +68,15 @@ def filter_df(df, model, location, metric, start_date, end_date):
 
     dff.dropna(subset=[metric], inplace=True)
 
-    dff['model_label'] = dff['model_name'] + '-' + dff['model_date'].dt.strftime("%m/%d").str[1:]
+    dff['model_label'] = dff['model_name'].astype('str') + '-' + dff['model_date'].dt.strftime("%m/%d").str[1:]
 
     return dff
 
 df = load_projections()
+
+print(np.finfo('float16').max)
+print(np.finfo('float32').max)
+print(np.finfo('float64').max)
 
 # Make a list of all of the U.S. locations
 us_locations = list(us_state_abbrev.keys()) + \
@@ -456,4 +482,4 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     return fig
 
 if __name__ == "__main__":
-    app.run_server(debug=False, port=5000)
+    app.run_server(debug=True, port=5000)
