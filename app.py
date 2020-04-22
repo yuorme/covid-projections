@@ -74,10 +74,6 @@ def filter_df(df, model, location, metric, start_date, end_date):
 
 df = load_projections()
 
-print(np.finfo('float16').max)
-print(np.finfo('float32').max)
-print(np.finfo('float64').max)
-
 # Make a list of all of the U.S. locations
 us_locations = list(us_state_abbrev.keys()) + \
         ['Other Counties, WA', 'King and Snohomish Counties (excluding Life Care Center),\
