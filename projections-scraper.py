@@ -102,6 +102,10 @@ def get_ihme_df():
         zf.extractall(os.path.join('data','ihme_archive'))
 
         model_folder = zf.namelist()[0][:-1] #drop trailing slash
+        
+        if '/' in model_folder:
+            model_folder = model_folder.split('/')[0]
+    
         if model_folder != 'ihme-covid19': #parse from zip file folder name
             model_version = model_folder
         else: #parse from url folder name
