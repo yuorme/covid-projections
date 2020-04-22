@@ -4,7 +4,7 @@
 import pandas as pd
 import numpy as np
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import dash
 import dash_core_components as dcc
@@ -201,7 +201,7 @@ controls = dbc.Card(
                     id='model-date-picker',
                     min_date_allowed=df.model_date.min(),
                     max_date_allowed=datetime.today(),
-                    start_date=df.model_date.min(),
+                    start_date=df.model_date.min() + timedelta(days=1), #HACK: Temporarily fixes the colorscale issue for >12 models
                     end_date=datetime.today(),
                     initial_visible_month=datetime.today(),
                 ),
