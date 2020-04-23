@@ -11,6 +11,7 @@ import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
+from flask_talisman import Talisman
 
 import plotly.graph_objects as go
 import plotly.express as px
@@ -114,7 +115,12 @@ app = dash.Dash(
 )
 title = 'COVID Projections Tracker'
 app.title = title
-server = app.server
+server = app.server # why do we assign this here?
+
+
+# This forces https for the site
+Talisman(app.server, content_security_policy=None)
+
 
 collapse_plot_options = html.Div(
             [
