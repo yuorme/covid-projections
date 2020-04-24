@@ -229,7 +229,7 @@ controls = dbc.Card(
                     id='model-date-picker',
                     min_date_allowed=df.model_date.min(),
                     max_date_allowed=datetime.today(),
-                    start_date=df.model_date.min() + timedelta(days=1), #HACK: Temporarily fixes the colorscale issue for >12 models
+                    start_date=df.model_date.min() + timedelta(days=2), #HACK: Temporarily fixes the colorscale issue for >12 models
                     end_date=datetime.today(),
                     initial_visible_month=datetime.today(),
                 ),
