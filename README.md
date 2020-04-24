@@ -10,7 +10,7 @@ COVID-19 Projections Data and Dashboard (https://www.covid-projections.com/)
 Covid Projections is under active development, current features are shown here.
 
 ### Interactive Dashboard:
-- Historical model projections for a given country or region (currently only supports IHME data)
+- Historical model projections for a given country or region (currently supports IHME and LANL data)
 
 ### Data Scraper:
 - IHME - http://www.healthdata.org/covid/data-downloads
