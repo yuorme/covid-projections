@@ -111,8 +111,6 @@ app = dash.Dash(
 )
 title = 'COVID Projections Tracker'
 app.title = title
-server = app.server # why do we assign this here?
-
 
 # This forces https for the site
 Talisman(app.server, content_security_policy=None)
@@ -218,7 +216,7 @@ controls = dbc.Card(
                     options=[
                         {"label": column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.sort_values().tolist() #TODO: Might be nice if metrics were sorted alphabetically by label rather than column names
                     ],
-                    value="totdea_mean",
+                    value="deaths_mean",
                 ),
             ]
         ),
@@ -441,17 +439,42 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     if y_axis_type == 'log':
         dff = dff[dff[metric] > 3] #prevent tiny log scale values from showing up
 
-    fig = px.line(
-        dff,
-        x='date',
-        y=metric,
-        color='model_label',
-        color_discrete_sequence=ihme_color_scale + lanl_color_scale,
-        title=plot_title,
-        labels=column_translator,
-        hover_name='model_version',
-        hover_data=['model_name']
-    )
+
+    if 'confirmed' in metric or 'dea' in metric:
+        fig = px.line(
+            dff[dff.date > dff.model_date],
+            x='date',
+            y=metric,
+            color='model_label',
+            color_discrete_sequence=ihme_color_scale + lanl_color_scale,
+            title=plot_title,
+            labels=column_translator,
+            hover_name='model_version',
+            hover_data=['model_name']
+        )
+
+        actual = px.bar(
+            dff[(dff.date <= dff.model_date) & (dff.model_date == dff.model_date.max())],
+            x='date',
+            y=metric,
+            hover_name='model_version',
+            color_discrete_sequence=['#696969']
+        )
+
+        fig.add_trace(actual.data[0])
+
+    else:
+         fig = px.line(
+            dff,
+            x='date',
+            y=metric,
+            color='model_label',
+            color_discrete_sequence=ihme_color_scale + lanl_color_scale,
+            title=plot_title,
+            labels=column_translator,
+            hover_name='model_version',
+            hover_data=['model_name']
+        )       
 
     fig.layout.template = 'ggplot2'
     fig.update_layout(
@@ -484,4 +507,4 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     return fig
 
 if __name__ == "__main__":
-    app.run_server(debug=False, port=5000)
+    app.run_server(debug=True, port=5000)
