@@ -111,6 +111,7 @@ app = dash.Dash(
 )
 title = 'COVID Projections Tracker'
 app.title = title
+server = app.server #need this for heroku - gunicorn deploy
 
 # This forces https for the site
 Talisman(app.server, content_security_policy=None)
