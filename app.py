@@ -133,10 +133,22 @@ collapse_plot_options = html.Div(
                             [
                                 dbc.Checklist(
                                     options=[
-                                        {"label": "Semi-log Plot", "value": True}
+                                        {"label": "Semi-log Plot", "value": [False, True]}
                                     ],
                                     value=False,
                                     id="log-scale-toggle",
+                                    switch=True,
+                                ),
+                            ]
+                        ),
+                        dbc.FormGroup(
+                            [
+                                dbc.Checklist(
+                                    options=[
+                                        {"label": "Plot Actual Deaths and Cases", "value": [False, True]}
+                                    ],
+                                    value=True, #BUG: Doesn't default to display selected on app intialization
+                                    id="actual-values-toggle",
                                     switch=True,
                                 ),
                             ]
@@ -410,17 +422,18 @@ def make_stat_cards(model, location, metric, start_date, end_date):
         Input("model-date-picker", "start_date"),
         Input("model-date-picker", "end_date"),
         Input("log-scale-toggle", "value"),
+        Input("actual-values-toggle", "value"),
         Input("ihme-color-dropdown", "value"),
         Input("lanl-color-dropdown", "value")
     ],
 
 )
-def make_primary_graph(model, location, metric, start_date, end_date, log_scale, color_scale_ihme, color_scale_lanl):
+def make_primary_graph(model, location, metric, start_date, end_date, log_scale, actual_values, color_scale_ihme, color_scale_lanl):
     '''Callback for the primary historical projections line chart
     '''
     dff = filter_df(df, model, location, metric, start_date, end_date)
-
-    model_title = ' & '.join(model)
+    
+    model_title = ' & '.join(dff.model_name.unique())
 
     plot_title = f'{model_title} - {location} - {column_translator[metric]}'
 
@@ -440,7 +453,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
         dff = dff[dff[metric] > 3] #prevent tiny log scale values from showing up
 
 
-    if 'confirmed' in metric or 'dea' in metric:
+    if 'confirmed' in metric or 'dea' in metric and actual_values:
         fig = px.line(
             dff[dff.date > dff.model_date],
             x='date',
@@ -452,7 +465,6 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
             hover_name='model_version',
             hover_data=['model_name']
         )
-
         actual = px.bar(
             dff[(dff.date <= dff.model_date) & (dff.model_date == dff.model_date.max())],
             x='date',
@@ -460,9 +472,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
             hover_name='model_version',
             color_discrete_sequence=['#696969']
         )
-
         fig.add_trace(actual.data[0])
-
     else:
          fig = px.line(
             dff,
