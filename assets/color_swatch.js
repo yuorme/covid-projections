@@ -16,21 +16,11 @@ style_dict = {
 }
 
 
-
-const indicesOfInterest = [0,2,3,5];
-
-var dropdown_observer = new MutationObserver(function(mutations) {
-    var color_dropdown = document.getElementById("color-dropdown");
-
-    if (document.querySelector("#color-dropdown > div > div.Select-menu-outer") != null){
-
-        if (color_dropdown.contains(document.querySelector("#color-dropdown > div > div.Select-menu-outer")) ) {
-            var outer_menu = color_dropdown.getElementsByClassName('Select-menu-outer');
+var insert_swatches = function (color_dropdown) {
+        var outer_menu = color_dropdown.getElementsByClassName('Select-menu-outer');
             if ( outer_menu != null){
 
                 if (outer_menu.length > 0) {
-                    // var check_for_swatches = document.getElementsByClassName("swatch");
-                    // console.log(outer_menu);
                     var max_length = 0;
                     var other_options = document.getElementsByClassName("VirtualizedSelectOption");
                     for (let i = 0; i < other_options.length; i++) {
@@ -54,9 +44,6 @@ var dropdown_observer = new MutationObserver(function(mutations) {
                                     swatch_div.style.background = color_list[j];
                                     swatch_div.style.display = "inline-block";
                                     swatch_container.appendChild(swatch_div);
-                                    // other_options[i].appendChild(swatch_div);
-                                    // other_options[i].appendChild(style_div);
-                                    // swatch_container.appendChild(swatch_div);
                                 }
 
                             }
@@ -73,14 +60,37 @@ var dropdown_observer = new MutationObserver(function(mutations) {
                             other_options[i].removeChild(other_options[i].firstChild);
                             other_options[i].appendChild(swatch_container);
                             swatch_container.insertBefore(style_div, swatch_container.firstChild);
-                            // other_options[i].insertBefore(style_div, other_options[i].firstChild);
                         }
 
                     }
 
                 }
             }
+};
+
+
+
+
+const indicesOfInterest = [0,2,3,5];
+
+var dropdown_observer;
+dropdown_observer = new MutationObserver(function (mutations) {
+
+
+    // If the color dropdown has been clicked, the Select-menu-outer div will exist and we can insert swatches
+    if (document.querySelector("#ihme-color-dropdown > div > div.Select-menu-outer") != null) {
+        var ihme_color_dropdown = document.getElementById("ihme-color-dropdown");
+        if (ihme_color_dropdown.contains(document.querySelector("#ihme-color-dropdown > div > div.Select-menu-outer"))) {
+            insert_swatches(ihme_color_dropdown);
+
         }
+    }
+    else if (document.querySelector("#lanl-color-dropdown > div > div.Select-menu-outer") != null) {
+            var lanl_color_dropdown = document.getElementById("lanl-color-dropdown");
+            if (lanl_color_dropdown.contains(document.querySelector("#lanl-color-dropdown > div > div.Select-menu-outer"))) {
+                insert_swatches(lanl_color_dropdown);
+
+            }
     }
 });
 
