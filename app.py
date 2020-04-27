@@ -134,9 +134,9 @@ collapse_plot_options = html.Div(
                             [
                                 dbc.Checklist(
                                     options=[
-                                        {"label": "Semi-log Plot", "value": [False, True]}
+                                        {"label": "Semi-log Plot", "value": False}
                                     ],
-                                    value=False,
+                                    value=False, #HACK: notice that this is a boolean
                                     id="log-scale-toggle",
                                     switch=True,
                                 ),
@@ -146,9 +146,9 @@ collapse_plot_options = html.Div(
                             [
                                 dbc.Checklist(
                                     options=[
-                                        {"label": "Plot Actual Deaths and Cases", "value": [False, True]}
+                                        {"label": "Plot Actual Deaths and Cases", "value": True}
                                     ],
-                                    value=True, #BUG: Doesn't default to display selected on app intialization
+                                    value=[True], #HACK: Notice that this is a list
                                     id="actual-values-toggle",
                                     switch=True,
                                 ),
