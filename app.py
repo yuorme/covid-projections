@@ -18,7 +18,7 @@ import plotly.express as px
 
 from region_abbreviations import us_state_abbrev
 from column_translater import column_translator
-
+from config import app_config
 
 #load data
 def load_projections():
@@ -556,4 +556,4 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     return fig
 
 if __name__ == "__main__":
-    app.run_server(debug=False, port=5000)
+    app.run_server(debug=app_config['debug'], port=5000)
