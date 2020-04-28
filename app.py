@@ -247,7 +247,7 @@ controls = dbc.Card(
         ),
         dbc.FormGroup(
             [
-                dbc.Label("Model Date"),
+                dbc.Label("Model Date", id='model-date-label'),
                 dcc.DatePickerRange(
                     id='model-date-picker',
                     min_date_allowed=df.model_date.min(),
@@ -256,12 +256,20 @@ controls = dbc.Card(
                     end_date=datetime.today(),
                     initial_visible_month=datetime.today(),
                 ),
+                dbc.Tooltip(
+                    f"Forecast generated in this date range",
+                    target="model-date-label",
+                    placement='right',
+                    offset=0,
+                ),
             ]
         ),
         collapse_plot_options
     ],
     body=True,
 )
+
+
 
 plotly_config = dict(
     scrollZoom = True,
@@ -380,30 +388,48 @@ def build_cards(dff, metric, model):
     cards = [
         dbc.Col([
             dbc.Card([
-                dbc.CardHeader([html.H5(f"Projected Peak - Latest", className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
+                dbc.CardHeader([html.H5(f"Projected Peak - Latest", id='projected-latest-header', className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
                 dbc.CardBody([
                     html.H2(f'{int(proj_latest)}', className='card-text'),
                     html.P(f'{proj_latest_model}', className='card-text'),
                 ])
-            ], color="info", outline=True)
+            ], color="info", outline=True),
+            dbc.Tooltip(
+                f"Projected peak value for {column_translator[metric]} for the most recent model included in the selection",
+                target="projected-latest-header",
+                placement='top',
+                offset=0,
+            ),
         ]),
         dbc.Col([
             dbc.Card([
-                dbc.CardHeader([html.H5(f"Projected Peak - Maximum", className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
+                dbc.CardHeader([html.H5(f"Projected Peak - Maximum", id='projected-max-header', className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
                 dbc.CardBody([
                     html.H2(f'{int(proj_max)}', className='card-text'),
                     html.P(f'{proj_max_model}', className='card-text'),
                 ])
-            ], color="danger", outline=True)
+            ], color="danger", outline=True),
+            dbc.Tooltip(
+                f"Projected peak value for {column_translator[metric]} for the model with the highest value included in the selection",
+                target="projected-max-header",
+                placement='top',
+                offset=0,
+            )
         ]),
         dbc.Col([
             dbc.Card([
-                dbc.CardHeader([html.H5("Projected Peak - Minimum", className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
+                dbc.CardHeader([html.H5("Projected Peak - Minimum", id='projected-min-header', className="card-text")]), #TODO:add dbc.Tooltip to explain what this card means
                 dbc.CardBody([
                     html.H2(f'{int(proj_min)}', className='card-text'),
                     html.P(f'{proj_min_model}', className='card-text'),
                 ])
-            ], color="success", outline=True)
+            ], color="success", outline=True),
+            dbc.Tooltip(
+                f"Projected peak value for {column_translator[metric]} for the model with the lowest value included in the selection",
+                target="projected-min-header",
+                placement='top',
+                offset=0,
+            )
         ]),
     ]
 
