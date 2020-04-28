@@ -45,16 +45,20 @@ def get_lanl_df(min_date='2020-04-04'):
         df_list = []
         
         for date in lanl_dates:
-        
-            url = f'https://covid-19.bsvgateway.org/forecast/us/files/{date}/{metric}/{date}_{metric}_quantiles_us.csv'
-            r = requests.get(url)
 
-            if r.ok:
-                data = r.content.decode('utf8')
-                df = pd.read_csv(io.StringIO(data))
-                df['metric'] = metric
-                df_list.append(df)
-                print(f'lanl scraped {metric}: {date}')
+            for suffix in ['','_website']: #LANL added _website suffix to files in their 2020-04-26 update
+        
+                url = f'https://covid-19.bsvgateway.org/forecast/us/files/{date}/{metric}/{date}_{metric}_quantiles_us{suffix}.csv'
+                r = requests.get(url)
+
+                if r.ok:
+                    data = r.content.decode('utf8')
+                    df = pd.read_csv(io.StringIO(data))
+                    df['metric'] = metric
+                    df_list.append(df)
+                    print(f'lanl scraped {metric}: {date} {suffix}')
+                else:
+                    print('no metrics for:', date, suffix)
 
             time.sleep(0.2) #pause between requests
         
