@@ -140,6 +140,12 @@ collapse_plot_options = html.Div(
                                     id="log-scale-toggle",
                                     switch=True,
                                 ),
+                                dbc.Tooltip(
+                                    "Plot y-axis using a logarithmic scale (Default: False)",
+                                    target="log-scale-toggle",
+                                    placement='right',
+                                    offset=0,
+                                ),
                             ]
                         ),
                         dbc.FormGroup(
@@ -152,11 +158,17 @@ collapse_plot_options = html.Div(
                                     id="actual-values-toggle",
                                     switch=True,
                                 ),
+                                dbc.Tooltip(
+                                    "For metrics with actual historical data (e.g.deaths/confirmed cases), plot actual values as bars and projected values as lines (Default: True)",
+                                    target="actual-values-toggle",
+                                    placement='right',
+                                    offset=0,
+                                ),
                             ]
                         ),
                         dbc.FormGroup( #TODO: Fix Top and Left margins to align 
                             [
-                                dbc.Label("IHME Color"),
+                                dbc.Label("IHME Colorscale"),
                                 dbc.Col(
                                     dcc.Dropdown(
                                         id="ihme-color-dropdown",
@@ -172,7 +184,7 @@ collapse_plot_options = html.Div(
                         ),
                         dbc.FormGroup( #TODO: Fix Top and Left margins to align 
                             [
-                                dbc.Label("LANL Color"),
+                                dbc.Label("LANL Colorscale"),
                                 dbc.Col(
                                     dcc.Dropdown(
                                         id="lanl-color-dropdown",
@@ -518,4 +530,4 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     return fig
 
 if __name__ == "__main__":
-    app.run_server(debug=False, port=5000)
+    app.run_server(debug=True, port=5000)
