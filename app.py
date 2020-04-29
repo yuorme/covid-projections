@@ -49,6 +49,7 @@ def load_projections():
     df['date'] = pd.to_datetime(df['date'])
     df['model_date'] = pd.to_datetime(df['model_version'].str[0:10].str.replace('_','-'))
     df['location_abbr'] = df['location_name'].map(us_state_abbrev)
+    df = df[df['model_date'] > (datetime.today() - timedelta(days=31))] # only loading model versions from the past 31 days
 
     print('final mem usage:', df.info(memory_usage='deep'))
 
@@ -252,7 +253,7 @@ controls = dbc.Card(
                     id='model-date-picker',
                     min_date_allowed=df.model_date.min(),
                     max_date_allowed=datetime.today(),
-                    start_date=df.model_date.min() + timedelta(days=2), #HACK: Temporarily fixes the colorscale issue for >12 models
+                    start_date=datetime.today() - timedelta(days=31), #HACK: Temporarily fixes the colorscale issue for >12 models
                     end_date=datetime.today(),
                     initial_visible_month=datetime.today(),
                 ),
