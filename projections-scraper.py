@@ -126,7 +126,7 @@ def get_ihme_df():
         time.sleep(0.2)
         
     if len(df_list) > 0:
-        df = pd.concat(df_list).drop(columns=['V1','Unnamed: 0','location']) #drop problematic columns
+        df = pd.concat(df_list).drop(columns=['V1','Unnamed: 0','location','location_id']) #drop problematic columns
         df['location_name'] = np.where(df['location_name'] == 'US', 'United States of America', df['location_name']) 
         df.to_csv(os.path.join('data','ihme_compiled.csv'), index=False)
 
