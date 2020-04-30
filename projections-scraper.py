@@ -86,6 +86,7 @@ def get_ihme_filelist():
     file_list = list(itertools.chain.from_iterable(file_list)) #join list of lists
     file_list = [f['href'] for f in file_list] #get file url
     file_list.append(file_list.pop(0)) #insert latest list at end to ensure chronological order
+    file_list = ['http://www.healthdata.org' + f if '/sites/default/' in f else f for f in file_list] #append base url for files hosted on IHME website
     
     return file_list
 
@@ -100,7 +101,7 @@ def get_ihme_df():
     file_list = get_ihme_filelist()
 
     for f in file_list:
-        
+
         r = requests.get(f, stream=True)
         zf = zipfile.ZipFile(io.BytesIO(r.content))
         zf.extractall(os.path.join('data','ihme_archive'))
@@ -126,7 +127,7 @@ def get_ihme_df():
         time.sleep(0.2)
         
     if len(df_list) > 0:
-        df = pd.concat(df_list).drop(columns=['V1','Unnamed: 0','location','location_id']) #drop problematic columns
+        df = pd.concat(df_list).drop(columns=['V1','Unnamed: 0','location','location_id'], errors='ignore') #drop problematic columns if they exist in the df
         df['location_name'] = np.where(df['location_name'] == 'US', 'United States of America', df['location_name']) 
         df.to_csv(os.path.join('data','ihme_compiled.csv'), index=False)
 
