@@ -503,18 +503,18 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
             title=plot_title,
             labels=column_translator,
             hover_name='model_version',
-            hover_data=['model_name']
+            hover_data=['model_name'],
         )
         actual = px.bar(
             dff[(dff.date <= dff.model_date) & (dff.model_date == dff.model_date.max())],
             x='date',
             y=metric,
-            hover_name='model_version',
+            hover_name='model_date',
             color_discrete_sequence=['#696969']
         )
         fig.add_trace(actual.data[0])
     else:
-         fig = px.line(
+        fig = px.line(
             dff,
             x='date',
             y=metric,
@@ -522,12 +522,13 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
             color_discrete_sequence=ihme_color_scale + lanl_color_scale,
             title=plot_title,
             labels=column_translator,
-            hover_name='model_version',
+            hover_name='model_name',
             hover_data=['model_name']
         )       
 
     fig.layout.template = 'ggplot2'
     fig.update_layout(
+        showlegend=True,
         annotations=[dict(
             x=0.01,
             y=0.98,
