@@ -17,6 +17,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 from region_abbreviations import us_state_abbrev
+from more_info import more_info_alert
 from column_translater import column_translator
 from config import app_config
 
@@ -322,7 +323,7 @@ plotly_config = dict(
 app.layout = dbc.Container(
     [
         dbc.NavbarSimple(brand=title, color="primary", dark=True),
-        html.Div(dbc.Alert("Historical model projections for a given country or region (currently supports IHME and LANL projections)", color="primary", id='alert')),
+        html.Div(more_info_alert),
         html.Hr(),
         dbc.Row(
             [
@@ -378,6 +379,17 @@ app.layout = dbc.Container(
     ],
     fluid=True,
 )
+
+@app.callback(
+    Output("more-info-collapse", "is_open"),
+    [Input("more-info-button", "n_clicks")],
+    [State("more-info-collapse", "is_open")],
+)
+def toggle_collapse(n, is_open):
+    if n:
+        return not is_open
+    return is_open
+
 
 @app.callback(
     Output("collapse-plot-options", "is_open"),
