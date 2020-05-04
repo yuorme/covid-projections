@@ -75,8 +75,28 @@ def filter_df(df, model, location, metric, start_date, end_date):
 
     return dff
 
+#initialize app
+app = dash.Dash(
+    __name__, 
+    external_stylesheets=[dbc.themes.BOOTSTRAP,
+                          {
+                                'href': 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css',
+                                'rel': 'stylesheet',
+                                'crossorigin': 'anonymous'
+                            }
+                          ],
+    meta_tags=[
+        {"name": "viewport", "content": "width=device-width, initial-scale=1"}
+    ]
+)
+title = 'COVID Projections Tracker'
+app.title = title
+server = app.server #need this for heroku - gunicorn deploy
+
+# This forces https for the site
+Talisman(app.server, content_security_policy=None)
+
 df = load_projections()
-print(df.max())
 
 # Make a list of all of the U.S. locations
 us_locations = list(us_state_abbrev.keys()) + \
@@ -98,26 +118,6 @@ excluded_colorscales = ['plotly3','gray','haline','ice','solar','thermal']
 named_colorscales = [s for s in px.colors.named_colorscales() if s not in excluded_colorscales]
 style_lists = [[style,getattr(px.colors.sequential,style)] for style in dir(px.colors.sequential) if style.lower() in named_colorscales and len(getattr(px.colors.sequential,style)) >= 12]
 
-#initialize app
-app = dash.Dash(
-    __name__, 
-    external_stylesheets=[dbc.themes.BOOTSTRAP,
-                          {
-                                'href': 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css',
-                                'rel': 'stylesheet',
-                                'crossorigin': 'anonymous'
-                            }
-                          ],
-    meta_tags=[
-        {"name": "viewport", "content": "width=device-width, initial-scale=1"}
-    ]
-)
-title = 'COVID Projections Tracker'
-app.title = title
-server = app.server #need this for heroku - gunicorn deploy
-
-# This forces https for the site
-Talisman(app.server, content_security_policy=None)
 
 app.index_string = '''
 <!DOCTYPE html>
@@ -145,91 +145,91 @@ app.index_string = '''
 '''
 
 collapse_plot_options = html.Div(
+    [
+        dbc.Button(
+        "Advanced Plot Options",
+        id="collapse-button",
+        className="mb-3",
+        color="dark",
+        outline=True,
+        size="sm",
+        block=True
+        ),
+        dbc.Collapse(
             [
-                dbc.Button(
-                "Advanced Plot Options",
-                id="collapse-button",
-                className="mb-3",
-                color="dark",
-                outline=True,
-                size="sm",
-                block=True
-                ),
-                dbc.Collapse(
+                dbc.FormGroup(
                     [
-                        dbc.FormGroup(
-                            [
-                                dbc.Checklist(
-                                    options=[
-                                        {"label": "Semi-log Plot", "value": False}
-                                    ],
-                                    value=False, #HACK: notice that this is a boolean
-                                    id="log-scale-toggle",
-                                    switch=True,
-                                ),
-                                dbc.Tooltip(
-                                    "Plot y-axis using a logarithmic scale (Default: False)",
-                                    target="log-scale-toggle",
-                                    placement='right',
-                                    offset=0,
-                                ),
-                            ]
-                        ),
-                        dbc.FormGroup(
-                            [
-                                dbc.Checklist(
-                                    options=[
-                                        {"label": "Plot Actual Deaths and Cases", "value": True}
-                                    ],
-                                    value=[True], #HACK: Notice that this is a list
-                                    id="actual-values-toggle",
-                                    switch=True,
-                                ),
-                                dbc.Tooltip(
-                                    "For metrics with actual historical data (e.g.deaths/confirmed cases), plot actual values as bars and projected values as lines (Default: True)",
-                                    target="actual-values-toggle",
-                                    placement='right',
-                                    offset=0,
-                                ),
-                            ]
-                        ),
-                        dbc.FormGroup( #TODO: Fix Top and Left margins to align 
-                            [
-                                dbc.Label("IHME Colorscale"),
-                                dbc.Col(
-                                    dcc.Dropdown(
-                                        id="ihme-color-dropdown",
-                                        options=[
-                                            # TODO could we maybe add color swatches for the color scales?
-                                            # Doesn't seem possible with dbc Dropdown because labels can only be strings
-                                            {'label' : row[ 0 ], 'value' : row[ 0 ]} for row in style_lists
-                                        ],
-                                        value = "tempo"
-                                    ),
-                                ),
+                        dbc.Checklist(
+                            options=[
+                                {"label": "Semi-log Plot", "value": False}
                             ],
+                            value=False, #HACK: notice that this is a boolean
+                            id="log-scale-toggle",
+                            switch=True,
                         ),
-                        dbc.FormGroup( #TODO: Fix Top and Left margins to align 
-                            [
-                                dbc.Label("LANL Colorscale"),
-                                dbc.Col(
-                                    dcc.Dropdown(
-                                        id="lanl-color-dropdown",
-                                        options=[
-                                            # TODO could we maybe add color swatches for the color scales?
-                                            # Doesn't seem possible with dbc Dropdown because labels can only be strings
-                                            {'label' : row[ 0 ], 'value' : row[ 0 ]} for row in style_lists
-                                        ],
-                                        value = "amp"
-                                    ),
-                                ),
+                        dbc.Tooltip(
+                            "Plot y-axis using a logarithmic scale (Default: False)",
+                            target="log-scale-toggle",
+                            placement='right',
+                            offset=0,
+                        ),
+                    ]
+                ),
+                dbc.FormGroup(
+                    [
+                        dbc.Checklist(
+                            options=[
+                                {"label": "Plot Actual Deaths and Cases", "value": True}
                             ],
+                            value=[True], #HACK: Notice that this is a list
+                            id="actual-values-toggle",
+                            switch=True,
+                        ),
+                        dbc.Tooltip(
+                            "For metrics with actual historical data (e.g.deaths/confirmed cases), plot actual values as bars and projected values as lines (Default: True)",
+                            target="actual-values-toggle",
+                            placement='right',
+                            offset=0,
+                        ),
+                    ]
+                ),
+                dbc.FormGroup( #TODO: Fix Top and Left margins to align 
+                    [
+                        dbc.Label("IHME Colorscale"),
+                        dbc.Col(
+                            dcc.Dropdown(
+                                id="ihme-color-dropdown",
+                                options=[
+                                    # TODO could we maybe add color swatches for the color scales?
+                                    # Doesn't seem possible with dbc Dropdown because labels can only be strings
+                                    {'label' : row[ 0 ], 'value' : row[ 0 ]} for row in style_lists
+                                ],
+                                value = "tempo"
+                            ),
                         ),
                     ],
-                    id="collapse-plot-options"
-                    )
-                ]
+                ),
+                dbc.FormGroup( #TODO: Fix Top and Left margins to align 
+                    [
+                        dbc.Label("LANL Colorscale"),
+                        dbc.Col(
+                            dcc.Dropdown(
+                                id="lanl-color-dropdown",
+                                options=[
+                                    # TODO could we maybe add color swatches for the color scales?
+                                    # Doesn't seem possible with dbc Dropdown because labels can only be strings
+                                    {'label' : row[ 0 ], 'value' : row[ 0 ]} for row in style_lists
+                                ],
+                                value = "amp"
+                            ),
+                        ),
+                    ],
+                ),
+            ],
+            id="collapse-plot-options"
             )
+        ]
+    )
 
 #controls - adapted from https://dash-bootstrap-components.opensource.faculty.ai/examples/iris/
 controls = dbc.Card(
