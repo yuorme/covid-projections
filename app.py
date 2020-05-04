@@ -19,7 +19,7 @@ import plotly.express as px
 from region_abbreviations import us_state_abbrev
 from more_info import more_info_alert
 from column_translater import column_translator
-from config import app_config
+from config import app_config, plotly_config
 
 #load data
 def load_projections():
@@ -76,6 +76,7 @@ def filter_df(df, model, location, metric, start_date, end_date):
     return dff
 
 df = load_projections()
+print(df.max())
 
 # Make a list of all of the U.S. locations
 us_locations = list(us_state_abbrev.keys()) + \
@@ -293,31 +294,6 @@ controls = dbc.Card(
         collapse_plot_options
     ],
     body=True,
-)
-
-
-
-plotly_config = dict(
-    scrollZoom = True,
-    displaylogo= False,
-    showLink = False,
-    toImageButtonOptions={
-        'format':'png',
-        'filename':'covid-projections',
-        #twitter optimized 16:9 size
-        'width':1200,
-        'height':675
-    },
-    modeBarButtonsToRemove = [
-        'sendDataToCloud',
-        'zoomIn2d',
-        'zoomOut2d',
-        'hoverClosestCartesian',
-        'hoverCompareCartesian',
-        'hoverClosest3d',
-        'hoverClosestGeo',
-        'resetScale2d'
-    ],
 )
 
 app.layout = dbc.Container(
