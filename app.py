@@ -52,9 +52,19 @@ def load_projections():
     df['location_abbr'] = df['location_name'].map(us_state_abbrev)
     df = df[df['model_date'] > (datetime.today() - timedelta(days=31))] # only loading model versions from the past 31 days
 
+    dtype_reducer(df)
     print('final mem usage:', df.info(memory_usage='deep'))
 
     return df
+
+def dtype_reducer(df):
+    '''converts float32 to float16 where possible
+    '''
+
+    for c in df.select_dtypes(include=['float32','float64']).columns:
+        if df[c].max() <= np.finfo('float16').max:
+            print('converting to float16', c)
+            df[c] = df[c].astype('float16')
 
 def filter_df(df, model, location, metric, start_date, end_date):
 
@@ -97,6 +107,8 @@ server = app.server #need this for heroku - gunicorn deploy
 Talisman(app.server, content_security_policy=None)
 
 df = load_projections()
+print(df.max())
+print(np.finfo('float16').max)
 
 # Make a list of all of the U.S. locations
 us_locations = list(us_state_abbrev.keys()) + \
