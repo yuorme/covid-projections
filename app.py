@@ -107,8 +107,6 @@ server = app.server #need this for heroku - gunicorn deploy
 Talisman(app.server, content_security_policy=None)
 
 df = load_projections()
-print(df.max())
-print(np.finfo('float16').max)
 
 # Make a list of all of the U.S. locations
 us_locations = list(us_state_abbrev.keys()) + \
