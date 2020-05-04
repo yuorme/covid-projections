@@ -47,20 +47,24 @@ def get_lanl_df(min_date='2020-04-04'):
         for date in lanl_dates:
 
             for suffix in ['','_website']: #LANL added _website suffix to files in their 2020-04-26 update
+
+                for scope in ['us','global']:
         
-                url = f'https://covid-19.bsvgateway.org/forecast/us/files/{date}/{metric}/{date}_{metric}_quantiles_us{suffix}.csv'
-                r = requests.get(url)
+                    url = f'https://covid-19.bsvgateway.org/forecast/{scope}/files/{date}/{metric}/{date}_{metric}_quantiles_{scope}{suffix}.csv'
+                    r = requests.get(url)
 
-                if r.ok:
-                    data = r.content.decode('utf8')
-                    df = pd.read_csv(io.StringIO(data))
-                    df['metric'] = metric
-                    df_list.append(df)
-                    print(f'lanl scraped {metric}: {date} {suffix}')
-                else:
-                    print('no metrics for:', date, suffix)
+                    if r.ok:
+                        data = r.content.decode('utf8')
+                        df = pd.read_csv(io.StringIO(data))
+                        df['metric'] = metric
+                        df.drop(columns=['simple_state','simple_countries'], inplace=True, errors='ignore')
+                        df.rename(columns={'state':'location_name','countries':'location_name'}, inplace=True)
+                        df_list.append(df)
+                        print(f'lanl scraped {metric}: {date} {scope} {suffix}')
+                    else:
+                        print('no metrics for:', date, scope, suffix)
 
-            time.sleep(0.2) #pause between requests
+                    time.sleep(0.2) #pause between requests
         
         #merge and process data
         if len(df_list) > 0:
@@ -139,8 +143,8 @@ def process_lanl_compiled(metric):
     '''
     df = pd.read_csv(os.path.join('data',f'lanl_{metric}_compiled.csv'))
 
-    lanl_keep_cols = ['dates','state','q025','q50','q975','fcst_date'] #TODO: using 95% CI (97.5/2.5). Is this consistent with IHME?
-    lanl_index = ['fcst_date','state','dates']
+    lanl_keep_cols = ['dates','location_name','q025','q50','q975','fcst_date'] #TODO: using 95% CI (97.5/2.5). Is this consistent with IHME?
+    lanl_index = ['fcst_date','location_name','dates']
     lanl_metrics = [c for c in lanl_keep_cols if 'q' == c[0]]
     lanl_metrics_diff = [c+'_diff' for c in lanl_metrics]
     df = df[lanl_keep_cols]
@@ -174,6 +178,12 @@ def merge_projections():
 
     #load IHME data
     ihme = pd.read_csv(os.path.join('data','ihme_compiled.csv'))
+
+    #HACK: drop new IHME columns
+    ihme.drop(columns=['mobility_data_type','total_tests_data_type'], inplace=True)
+    new_ihme_columns = ['mobility_composite','total_tests','confirmed_infections','est_infections_mean','est_infections_lower','est_infections_upper']
+    ihme.drop(columns=new_ihme_columns, inplace=True)
+    
     ihme = ihme[ihme.model_version != '2020_04_05.05.us']
     ihme['model_name'] = 'IHME'
 
@@ -184,6 +194,6 @@ def merge_projections():
     print('merged data:', merged.shape)
 
 if __name__ == "__main__":
-    get_lanl_df()
-    get_ihme_df()
+    # get_lanl_df()
+    # get_ihme_df()
     merge_projections()
