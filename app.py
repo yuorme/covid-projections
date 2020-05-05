@@ -142,6 +142,8 @@ app.index_string = '''
         ga('create', 'UA-164558144-1', 'auto');
         ga('send', 'pageview');
         </script>
+        <script data-ad-client="ca-pub-3259423161421299" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
+        </script>
     </head>
     <body>
         {%app_entry%}
