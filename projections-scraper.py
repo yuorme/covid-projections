@@ -152,6 +152,9 @@ def process_lanl_compiled(metric):
     df = df.sort_values(lanl_index).reset_index(drop=True) #sort to allow diff
     df[lanl_metrics_diff] =  df.sort_values(lanl_index)[lanl_metrics].diff()
 
+    # LANL uses US instead of United States of America, let's make it match IHME
+    df.loc[df.location_name == "US", 'location_name'] = "United States of America"
+
     #replace negative values caused by the diff crossing over states
     for c in lanl_metrics_diff:
         df[c] = np.where(df[c] < 0, 0, df[c])
