@@ -1,4 +1,4 @@
-
+# data types for the merged_projections.csv file
 csv_dtypes = [
         'category','str',
         'float32','float32','float32',

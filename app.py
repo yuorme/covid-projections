@@ -66,6 +66,14 @@ def flatten(items):
         else:
             yield x
 
+def unique_location_names():
+    df = pd.read_sql_query("SELECT DISTINCT location_name FROM projections", engine)
+    return list(flatten(df.values))
+
+def min_model_date():
+    df = pd.read_sql_query("SELECT MIN(model_date) FROM projections", engine)
+    return df.iloc[0,0]
+
 def metric_labels():
     df = pd.read_sql_query("SELECT * FROM projections limit 10", engine)
     df.drop(columns=['index'],inplace=True)
@@ -125,7 +133,7 @@ us_locations.sort()
 # Move 'United States of America' to the front
 us_locations.insert(0, us_locations.pop(us_locations.index('United States of America')))
 
-non_us_locations = list( set(df.location_name.unique()) - set(us_locations))
+non_us_locations = list(set(unique_location_names()) - set(us_locations))
 non_us_locations.sort()
 
 # combine the two lists and make sure we don't somehow have duplicates while keeping the order we created
@@ -136,6 +144,9 @@ all_locations = list(dict.fromkeys(all_locations))
 excluded_colorscales = ['plotly3','gray','haline','ice','solar','thermal']
 named_colorscales = [s for s in px.colors.named_colorscales() if s not in excluded_colorscales]
 style_lists = [[style,getattr(px.colors.sequential,style)] for style in dir(px.colors.sequential) if style.lower() in named_colorscales and len(getattr(px.colors.sequential,style)) >= 12]
+
+# get minimum model date
+min_date = min_model_date()
 
 
 app.index_string = '''
@@ -296,7 +307,7 @@ controls = dbc.Card(
                 dbc.Label("Model Date", id='model-date-label'),
                 dcc.DatePickerRange(
                     id='model-date-picker',
-                    min_date_allowed=df.model_date.min(),
+                    min_date_allowed=min_date,
                     max_date_allowed=datetime.today(),
                     start_date=datetime.today() - timedelta(days=30), #HACK: Temporarily fixes the colorscale issue for >12 models
                     end_date=datetime.today(),
