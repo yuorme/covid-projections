@@ -5,6 +5,8 @@ import pandas as pd
 import numpy as np
 import os
 from datetime import datetime, timedelta
+from sqlalchemy import create_engine
+from collections.abc import Iterable
 
 import dash
 import dash_core_components as dcc
@@ -19,30 +21,19 @@ import plotly.express as px
 from region_abbreviations import us_state_abbrev
 from more_info import more_info_alert
 from column_translater import column_translator
+from plot_option_data import csv_dtypes, table_dtypes
 from config import app_config, plotly_config
+
+# make sqlite connection
+engine = create_engine(app_config['sqlalchemy_database_uri'])
+table_name = app_config['database_name']
 
 #load data
 def load_projections():
 
     df = pd.read_csv(os.path.join('data','merged_projections.csv'), nrows=50)
-    
-    dtypes = [
-        'category','str',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'category','category',
-        'float32','float32','float32',
-        'float32','float32','float32',
-    ]
 
-    pd_dtypes = dict(zip(df.columns, dtypes))
+    pd_dtypes = dict(zip(df.columns, csv_dtypes))
 
     df = pd.read_csv(os.path.join('data','merged_projections.csv'), dtype=pd_dtypes)
     df = df[df.model_version != '2020_04_05.05.us']
@@ -66,18 +57,35 @@ def dtype_reducer(df):
             print('converting to float16', c)
             df[c] = df[c].astype('float16')
 
-def filter_df(df, model, location, metric, start_date, end_date):
+def flatten(items):
+    """Yield items from any nested iterable; see Reference."""
+    for x in items:
+        if isinstance(x, Iterable) and not isinstance(x, (str, bytes)):
+            for sub_x in flatten(x):
+                yield sub_x
+        else:
+            yield x
 
-    dff = df.copy()
+def metric_labels():
+    df = pd.read_sql_query("SELECT * FROM projections limit 10", engine)
+    df.drop(columns=['index'],inplace=True)
+    df = df.astype(dict(zip(df.columns, table_dtypes)))
+    return sorted([{"label": column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.sort_values().tolist() ], key=lambda k: k['label'])
 
-    dff = dff[
-        (dff.location_name == location) & 
-        (dff.model_name.isin(model)) &
-        (dff.model_date >= start_date) &
-        (dff.model_date <= end_date) & 
-        (dff.date > '2020-02-15') &
-        (dff.date < '2020-07-15')
-        ]
+def filter_df(model, location, metric, start_date, end_date):
+
+    filter_query = "SELECT * FROM {0} WHERE {0}.location_name = {1} AND {0}.model_name IN ({2}) AND {0}.model_date BETWEEN {1} AND {1} AND {0}.date > '2020-02-15' AND {0}.date < '2020-07-15' ORDER BY {0}.date"
+    filter_query = filter_query.format(table_name,'%s', ','.join(['%s'] * len(model)))
+
+    dff = pd.read_sql_query(filter_query,engine, params=tuple(flatten((location, model, start_date, end_date))),
+                            parse_dates=['model_date', 'date'])
+
+    dff.drop(columns=['index'],inplace=True)
+
+    # there's probably a better way to do this instead of hard-coding the types
+    pd_dtypes = dict(zip(dff.columns, table_dtypes))
+
+    dff = dff.astype(pd_dtypes)
 
     dff.dropna(subset=[metric], inplace=True)
 
@@ -104,7 +112,8 @@ app.title = title
 server = app.server #need this for heroku - gunicorn deploy
 
 # This forces https for the site
-Talisman(app.server, content_security_policy=None)
+if not app_config['debug']:
+    Talisman(app.server, content_security_policy=None)
 
 df = load_projections()
 
@@ -277,9 +286,7 @@ controls = dbc.Card(
                 dbc.Label("Metric"),
                 dcc.Dropdown(
                     id="metric-dropdown",
-                    options=[
-                        {"label": column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.sort_values().tolist() #TODO: Might be nice if metrics were sorted alphabetically by label rather than column names
-                    ],
+                    options=metric_labels(),
                     value="deaths_mean",
                 ),
             ]
@@ -473,7 +480,7 @@ def build_cards(dff, metric, model):
 def make_stat_cards(model, location, metric, start_date, end_date):
     '''Callback for the historical projections stats cards
     '''
-    dff = filter_df(df, model, location, metric, start_date, end_date)
+    dff = filter_df(model, location, metric, start_date, end_date)
 
     return build_cards(dff, metric, model)
 
@@ -495,7 +502,7 @@ def make_stat_cards(model, location, metric, start_date, end_date):
 def make_primary_graph(model, location, metric, start_date, end_date, log_scale, actual_values, color_scale_ihme, color_scale_lanl):
     '''Callback for the primary historical projections line chart
     '''
-    dff = filter_df(df, model, location, metric, start_date, end_date)
+    dff = filter_df(model, location, metric, start_date, end_date)
     
     model_title = ' & '.join(dff.model_name.unique())
 

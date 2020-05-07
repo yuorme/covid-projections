@@ -1,5 +1,7 @@
 app_config = {
-    'debug' : False, #Set flask debug mode: True for development, False for production
+    'debug' : True, #Set flask debug mode: True for development, False for production
+    'sqlalchemy_database_uri' : 'postgresql+psycopg2://localhost/covid_projections',
+    'database_name' : 'projections'
 }
 
 plotly_config = dict(

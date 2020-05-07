@@ -3,7 +3,7 @@
 
 import os
 import time
-from datetime import date, timedelta
+from datetime import datetime, date, timedelta
 
 import pandas as pd
 import numpy as np
@@ -15,8 +15,11 @@ import io
 import re
 import itertools
 import zipfile
+from sqlalchemy import create_engine
 
 from column_translater import lanl_to_ihme_translator
+from region_abbreviations import us_state_abbrev
+from config import app_config
 
 def get_date_list(min_date):
     '''
@@ -196,7 +199,45 @@ def merge_projections():
 
     print('merged data:', merged.shape)
 
+
+def create_projections_table():
+    # create the covid_projections db
+    engine = create_engine(app_config['sqlalchemy_database_uri'], echo=True)
+
+    # Make same changes as in the load_projections function
+    df = pd.read_csv(os.path.join('data','merged_projections.csv'), nrows=50)
+
+    dtypes = [
+        'category','str',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'category','category',
+        'float32','float32','float32',
+        'float32','float32','float32',
+    ]
+
+    pd_dtypes = dict(zip(df.columns, dtypes))
+
+    df = pd.read_csv(os.path.join('data','merged_projections.csv'), dtype=pd_dtypes)
+    df = df[df.model_version != '2020_04_05.05.us']
+
+    df['date'] = pd.to_datetime(df['date'])
+    df['model_date'] = pd.to_datetime(df['model_version'].str[0:10].str.replace('_','-'))
+    df['location_abbr'] = df['location_name'].map(us_state_abbrev)
+    df = df[df['model_date'] > (datetime.today() - timedelta(days=31))] # only loading model versions from the past 31 days
+
+    # drop old table and insert new table
+    df.to_sql(app_config['database_name'], con=engine, if_exists='replace') #Todo: Do we want to specify data types in the table?
+
 if __name__ == "__main__":
     get_lanl_df()
     get_ihme_df()
     merge_projections()
+    create_projections_table()
