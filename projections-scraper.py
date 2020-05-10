@@ -184,10 +184,16 @@ def merge_projections():
 
     #HACK: drop new IHME columns
     ihme.drop(columns=['mobility_data_type','total_tests_data_type'], inplace=True)
-    new_ihme_columns = ['mobility_composite','total_tests','confirmed_infections','est_infections_mean','est_infections_lower','est_infections_upper']
+    new_ihme_columns = [
+        'mobility_composite','total_tests','confirmed_infections',
+        'est_infections_mean','est_infections_lower','est_infections_upper',
+        'deaths_mean_smoothed','deaths_lower_smoothed','deaths_upper_smoothed',
+        'totdea_mean_smoothed','totdea_lower_smoothed','totdea_upper_smoothed'
+    ]
     ihme.drop(columns=new_ihme_columns, inplace=True)
-    
-    ihme = ihme[ihme.model_version != '2020_04_05.05.us']
+
+    #HACK: drop old IHME forecasts to save space
+    ihme = ihme[~ihme.model_version.isin(['2020_04_05.05.us','2020-03-25','2020_03_26','2020_03_27'])]
     ihme['model_name'] = 'IHME'
 
     #concatenate IHME and LANL data
