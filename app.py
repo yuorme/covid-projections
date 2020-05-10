@@ -104,7 +104,8 @@ app.title = title
 server = app.server #need this for heroku - gunicorn deploy
 
 # This forces https for the site
-Talisman(app.server, content_security_policy=None)
+if not app_config['debug']:
+    Talisman(app.server, content_security_policy=None)
 
 df = load_projections()
 
@@ -518,6 +519,13 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
 
 
     if 'confirmed' in metric or 'dea' in metric and actual_values:
+        if 'LANL' in dff.model_name.unique():
+            act_dff = dff[dff.model_name == 'LANL']
+            act_dff = act_dff[(act_dff.date <= act_dff.model_date) & (act_dff.model_date == act_dff.model_date.max())]
+        else:
+            act_dff = dff[(dff.date <= dff.model_date) & (dff.model_date == dff.model_date.max())]            
+        
+
         fig = px.line(
             dff[dff.date > dff.model_date],
             x='date',
@@ -530,7 +538,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
             hover_data=['model_name'],
         )
         actual = px.bar(
-            dff[(dff.date <= dff.model_date) & (dff.model_date == dff.model_date.max())],
+            act_dff,
             x='date',
             y=metric,
             hover_name='date',
