@@ -192,7 +192,7 @@ def get_yyg_df(min_date = '2020-04-01'):
     files = get_yyg_filelist()
 
     df_list = []
-    for date in yyg_dates[5:6]: #remove limitation here
+    for date in yyg_dates: #remove limitation here
         for f in files:
             url = f'https://raw.githubusercontent.com/youyanggu/covid19_projections/master/projections/{date}/{f}'
             r = requests.get(url)
