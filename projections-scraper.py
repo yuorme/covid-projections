@@ -193,7 +193,8 @@ def merge_projections():
     ihme.drop(columns=new_ihme_columns, inplace=True)
 
     #HACK: drop old IHME forecasts to save space
-    ihme = ihme[~ihme.model_version.isin(['2020_04_05.05.us','2020-03-25','2020_03_26','2020_03_27'])]
+    drop_models = ['2020_04_05.05.us','2020-03-25','2020_03_26','2020_03_27','2020_03_29','2020_03_30','2020_03_31.1','2020_04_01.2','2020_04_05.08.all']
+    ihme = ihme[~ihme.model_version.isin(drop_models)]
     ihme['model_name'] = 'IHME'
 
     #concatenate IHME and LANL data
@@ -203,6 +204,6 @@ def merge_projections():
     print('merged data:', merged.shape)
 
 if __name__ == "__main__":
-    get_lanl_df()
-    get_ihme_df()
+    # get_lanl_df()
+    # get_ihme_df()
     merge_projections()
