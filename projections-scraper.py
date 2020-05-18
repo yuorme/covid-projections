@@ -204,6 +204,6 @@ def merge_projections():
     print('merged data:', merged.shape)
 
 if __name__ == "__main__":
-    # get_lanl_df()
-    # get_ihme_df()
+    get_lanl_df()
+    get_ihme_df()
     merge_projections()
