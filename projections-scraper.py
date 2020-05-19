@@ -218,9 +218,10 @@ def create_projections_table():
         'float32','float32','float32',
         'float32','float32','float32',
         'float32','float32','float32',
-        'category','category',
+        'category',
         'float32','float32','float32',
         'float32','float32','float32',
+        'category'
     ]
 
     pd_dtypes = dict(zip(df.columns, dtypes))
@@ -234,7 +235,7 @@ def create_projections_table():
     df = df[df['model_date'] > (datetime.today() - timedelta(days=31))] # only loading model versions from the past 31 days
 
     # drop old table and insert new table
-    df.to_sql(app_config['database_name'], con=engine, if_exists='replace') #Todo: Do we want to specify data types in the table?
+    df.to_sql(app_config['database_name'], con=engine, if_exists='replace', method='multi', chunksize=5000) #Todo: Do we want to specify data types in the table?
 
 if __name__ == "__main__":
     get_lanl_df()
