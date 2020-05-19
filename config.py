@@ -4,7 +4,7 @@ app_config = {
     'debug' : False, #Set flask debug mode: True for development, False for production
     'sqlalchemy_database_uri' : f'postgresql+psycopg2://postgres:{os.environ.get("COVID_PRED_POSTGRES_PASS")}@'\
                                     f'{os.environ.get("COVID_PRED_RDS_URL")}/covid_projections?sslmode=verify-ca'\
-                                f'&sslrootcert={os.environ.get("COVID_PRED_RDS_SSL_CERT")}',
+                                f'&sslrootcert=rds-ca-2019-root.pem',
     'database_name' : 'projections'
 }
 
