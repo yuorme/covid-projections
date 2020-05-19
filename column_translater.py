@@ -43,6 +43,13 @@ column_translator = {
     'daily_confirmed_lower':'Daily Cases (Lower)',
     'daily_confirmed_mean':'Daily Cases (Mean)',
     'daily_confirmed_upper':'Daily Cases (Upper)',
+    # Smoothed
+    'deaths_mean_smoothed': 'Smoothed Daily Deaths (Mean)',
+    'deaths_lower_smoothed': 'Smoothed Daily Deaths (Lower)',
+    'deaths_upper_smoothed': 'Smoothed Daily Deaths (Upper)',
+    'totdea_mean_smoothed': 'Smoothed Cumulative Deaths (Mean)',
+    'totdea_lower_smoothed': 'Smoothed Cumulative Deaths (Lower)',
+    'totdea_upper_smoothed': 'Smoothed Cumulative Deaths (Upper)',
 }
 
 lanl_to_ihme_translator = {
