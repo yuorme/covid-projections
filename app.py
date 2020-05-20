@@ -28,32 +28,6 @@ from config import app_config, plotly_config
 engine = create_engine(app_config['sqlalchemy_database_uri'])
 table_name = app_config['database_name']
 
-#load data
-def load_projections():
-
-    df = pd.read_csv(os.path.join('data','merged_projections.csv'))
-    df = df.astype(csv_dtypes)
-    df = df[df.model_version != '2020_04_05.05.us']
-
-    df['date'] = pd.to_datetime(df['date'])
-    df['model_date'] = pd.to_datetime(df['model_version'].str[0:10].str.replace('_','-'))
-    df['location_abbr'] = df['location_name'].map(us_state_abbrev)
-    df = df[df['model_date'] > (datetime.today() - timedelta(days=31))] # only loading model versions from the past 31 days
-
-    dtype_reducer(df)
-    print('final mem usage:', df.info(memory_usage='deep'))
-
-    return df
-
-def dtype_reducer(df):
-    '''converts float32 to float16 where possible
-    '''
-
-    for c in df.select_dtypes(include=['float32','float64']).columns:
-        if df[c].max() <= np.finfo('float16').max:
-            print('converting to float16', c)
-            df[c] = df[c].astype('float16')
-
 def flatten(items):
     """Yield items from any nested iterable; see Reference."""
     for x in items:
@@ -117,8 +91,6 @@ server = app.server #need this for heroku - gunicorn deploy
 # This forces https for the site
 if not app_config['debug']:
     Talisman(app.server, content_security_policy=None)
-
-df = load_projections()
 
 # Make a list of all of the U.S. locations
 us_locations = list(us_state_abbrev.keys()) + \
