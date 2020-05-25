@@ -28,35 +28,6 @@ from config import app_config, plotly_config
 engine = create_engine(app_config['sqlalchemy_database_uri'])
 table_name = app_config['database_name']
 
-#load data
-def load_projections():
-
-    df = pd.read_csv(os.path.join('data','merged_projections.csv'), nrows=50)
-
-    pd_dtypes = dict(zip(df.columns, csv_dtypes))
-
-    df = pd.read_csv(os.path.join('data','merged_projections.csv'), dtype=pd_dtypes)
-    df = df[df.model_version != '2020_04_05.05.us']
-
-    df['date'] = pd.to_datetime(df['date'])
-    df['model_date'] = pd.to_datetime(df['model_version'].str[0:10].str.replace('_','-'))
-    df['location_abbr'] = df['location_name'].map(us_state_abbrev)
-    df = df[df['model_date'] > (datetime.today() - timedelta(days=31))] # only loading model versions from the past 31 days
-
-    dtype_reducer(df)
-    print('final mem usage:', df.info(memory_usage='deep'))
-
-    return df
-
-def dtype_reducer(df):
-    '''converts float32 to float16 where possible
-    '''
-
-    for c in df.select_dtypes(include=['float32','float64']).columns:
-        if df[c].max() <= np.finfo('float16').max:
-            print('converting to float16', c)
-            df[c] = df[c].astype('float16')
-
 def flatten(items):
     """Yield items from any nested iterable; see Reference."""
     for x in items:
@@ -77,7 +48,7 @@ def min_model_date():
 def metric_labels():
     df = pd.read_sql_query("SELECT * FROM projections limit 10", engine)
     df.drop(columns=['index'],inplace=True)
-    df = df.astype(dict(zip(df.columns, table_dtypes)))
+    df = df.astype(table_dtypes)
     return sorted([{"label": column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.sort_values().tolist() ], key=lambda k: k['label'])
 
 def filter_df(model, location, metric, start_date, end_date):
@@ -91,9 +62,7 @@ def filter_df(model, location, metric, start_date, end_date):
     dff.drop(columns=['index'],inplace=True)
 
     # there's probably a better way to do this instead of hard-coding the types
-    pd_dtypes = dict(zip(dff.columns, table_dtypes))
-
-    dff = dff.astype(pd_dtypes)
+    dff = dff.astype(table_dtypes)
 
     dff.dropna(subset=[metric], inplace=True)
 
@@ -109,8 +78,8 @@ app = dash.Dash(
                                 'href': 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css',
                                 'rel': 'stylesheet',
                                 'crossorigin': 'anonymous'
-                            }
-                          ],
+                          },
+                        ],
     meta_tags=[
         {"name": "viewport", "content": "width=device-width, initial-scale=1"}
     ]
@@ -122,8 +91,6 @@ server = app.server #need this for heroku - gunicorn deploy
 # This forces https for the site
 if not app_config['debug']:
     Talisman(app.server, content_security_policy=None)
-
-df = load_projections()
 
 # Make a list of all of the U.S. locations
 us_locations = list(us_state_abbrev.keys()) + \
@@ -383,6 +350,8 @@ app.layout = dbc.Container(
     ],
     fluid=True,
 )
+
+
 
 @app.callback(
     Output("more-info-collapse", "is_open"),

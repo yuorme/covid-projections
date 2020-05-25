@@ -7,6 +7,7 @@ from datetime import datetime, date, timedelta
 
 import pandas as pd
 import numpy as np
+from pangres import upsert
 
 import requests 
 from bs4 import BeautifulSoup
@@ -20,6 +21,7 @@ from sqlalchemy import create_engine
 from column_translater import lanl_to_ihme_translator
 from region_abbreviations import us_state_abbrev
 from config import app_config
+from plot_option_data import csv_dtypes
 
 def get_date_list(min_date):
     '''
@@ -238,10 +240,18 @@ def create_projections_table():
     df['date'] = pd.to_datetime(df['date'])
     df['model_date'] = pd.to_datetime(df['model_version'].str[0:10].str.replace('_','-'))
     df['location_abbr'] = df['location_name'].map(us_state_abbrev)
-    df = df[df['model_date'] > (datetime.today() - timedelta(days=31))] # only loading model versions from the past 31 days
+    # df = df[df['model_date'] > (datetime.today() - timedelta(days=31))] # only loading model versions from the past 31 days
 
     # drop old table and insert new table
-    df.to_sql(app_config['database_name'], con=engine, if_exists='replace') #Todo: Do we want to specify data types in the table?
+    # df.to_sql(app_config['database_name'], con=engine, if_exists='replace', method='multi', chunksize=5000) #Todo: Do we want to specify data types in the table?
+    # This upsert package requires us to name the index
+    df.index.name = 'index'
+    upsert(engine=engine,
+       df=df,
+       table_name=app_config['database_name'],
+       if_row_exists='ignore', chunksize=1000,
+           add_new_columns=False,
+           create_schema=False)
 
 if __name__ == "__main__":
     get_lanl_df()
