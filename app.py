@@ -5,8 +5,6 @@ import pandas as pd
 import numpy as np
 import os
 from datetime import datetime, timedelta
-from sqlalchemy import create_engine
-from collections.abc import Iterable
 
 import dash
 import dash_core_components as dcc
@@ -21,48 +19,65 @@ import plotly.express as px
 from region_abbreviations import us_state_abbrev
 from more_info import more_info_alert
 from column_translater import column_translator
-from plot_option_data import csv_dtypes, table_dtypes
 from config import app_config, plotly_config
 
-# make sqlite connection
-engine = create_engine(app_config['sqlalchemy_database_uri'])
-table_name = app_config['database_name']
+#load data
+def load_projections():
 
-def flatten(items):
-    """Yield items from any nested iterable; see Reference."""
-    for x in items:
-        if isinstance(x, Iterable) and not isinstance(x, (str, bytes)):
-            for sub_x in flatten(x):
-                yield sub_x
-        else:
-            yield x
+    df = pd.read_csv(os.path.join('data','merged_projections.csv'), nrows=50)
+    
+    dtypes = [
+        'category','str',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'float32','float32','float32',
+        'category','category',
+        'float32','float32','float32',
+        'float32','float32','float32',
+    ]
 
-def unique_location_names():
-    df = pd.read_sql_query("SELECT DISTINCT location_name FROM projections", engine)
-    return list(flatten(df.values))
+    pd_dtypes = dict(zip(df.columns, dtypes))
 
-def min_model_date():
-    df = pd.read_sql_query("SELECT MIN(model_date) FROM projections", engine)
-    return df.iloc[0,0]
+    df = pd.read_csv(os.path.join('data','merged_projections.csv'), dtype=pd_dtypes)
+    df = df[df.model_version != '2020_04_05.05.us']
 
-def metric_labels():
-    df = pd.read_sql_query("SELECT * FROM projections limit 10", engine)
-    df.drop(columns=['index'],inplace=True)
-    df = df.astype(table_dtypes)
-    return sorted([{"label": column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.sort_values().tolist() ], key=lambda k: k['label'])
+    df['date'] = pd.to_datetime(df['date'])
+    df['model_date'] = pd.to_datetime(df['model_version'].str[0:10].str.replace('_','-'))
+    df['location_abbr'] = df['location_name'].map(us_state_abbrev)
+    df = df[df['model_date'] > (datetime.today() - timedelta(days=31))] # only loading model versions from the past 31 days
 
-def filter_df(model, location, metric, start_date, end_date):
+    dtype_reducer(df)
+    print('final mem usage:', df.info(memory_usage='deep'))
 
-    filter_query = "SELECT * FROM {0} WHERE {0}.location_name = {1} AND {0}.model_name IN ({2}) AND {0}.model_date BETWEEN {1} AND {1} AND {0}.date > '2020-02-15' AND {0}.date < '2020-07-15' ORDER BY {0}.date"
-    filter_query = filter_query.format(table_name,'%s', ','.join(['%s'] * len(model)))
+    return df
 
-    dff = pd.read_sql_query(filter_query,engine, params=tuple(flatten((location, model, start_date, end_date))),
-                            parse_dates=['model_date', 'date'])
+def dtype_reducer(df):
+    '''converts float32 to float16 where possible
+    '''
 
-    dff.drop(columns=['index'],inplace=True)
+    for c in df.select_dtypes(include=['float32','float64']).columns:
+        if df[c].max() <= np.finfo('float16').max:
+            print('converting to float16', c)
+            df[c] = df[c].astype('float16')
 
-    # there's probably a better way to do this instead of hard-coding the types
-    dff = dff.astype(table_dtypes)
+def filter_df(df, model, location, metric, start_date, end_date):
+
+    dff = df.copy()
+
+    dff = dff[
+        (dff.location_name == location) & 
+        (dff.model_name.isin(model)) &
+        (dff.model_date >= start_date) &
+        (dff.model_date <= end_date) & 
+        (dff.date > '2020-02-15') &
+        (dff.date < '2020-07-15')
+        ]
 
     dff.dropna(subset=[metric], inplace=True)
 
@@ -78,7 +93,7 @@ app = dash.Dash(
                                 'href': 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css',
                                 'rel': 'stylesheet',
                                 'crossorigin': 'anonymous'
-                          },
+                          }
                         ],
     meta_tags=[
         {"name": "viewport", "content": "width=device-width, initial-scale=1"}
@@ -89,8 +104,9 @@ app.title = title
 server = app.server #need this for heroku - gunicorn deploy
 
 # This forces https for the site
-if not app_config['debug']:
-    Talisman(app.server, content_security_policy=None)
+Talisman(app.server, content_security_policy=None)
+
+df = load_projections()
 
 # Make a list of all of the U.S. locations
 us_locations = list(us_state_abbrev.keys()) + \
@@ -100,7 +116,7 @@ us_locations.sort()
 # Move 'United States of America' to the front
 us_locations.insert(0, us_locations.pop(us_locations.index('United States of America')))
 
-non_us_locations = list(set(unique_location_names()) - set(us_locations))
+non_us_locations = list( set(df.location_name.unique()) - set(us_locations))
 non_us_locations.sort()
 
 # combine the two lists and make sure we don't somehow have duplicates while keeping the order we created
@@ -111,9 +127,6 @@ all_locations = list(dict.fromkeys(all_locations))
 excluded_colorscales = ['plotly3','gray','haline','ice','solar','thermal']
 named_colorscales = [s for s in px.colors.named_colorscales() if s not in excluded_colorscales]
 style_lists = [[style,getattr(px.colors.sequential,style)] for style in dir(px.colors.sequential) if style.lower() in named_colorscales and len(getattr(px.colors.sequential,style)) >= 12]
-
-# get minimum model date
-min_date = min_model_date()
 
 
 app.index_string = '''
@@ -128,8 +141,6 @@ app.index_string = '''
         (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
         ga('create', 'UA-164558144-1', 'auto');
         ga('send', 'pageview');
-        </script>
-        <script data-ad-client="ca-pub-3259423161421299" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
         </script>
     </head>
     <body>
@@ -295,7 +306,9 @@ controls = dbc.Card(
                 dbc.Label("Metric"),
                 dcc.Dropdown(
                     id="metric-dropdown",
-                    options=metric_labels(),
+                    options=[
+                        {"label": column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.sort_values().tolist() #TODO: Might be nice if metrics were sorted alphabetically by label rather than column names
+                    ],
                     value="deaths_mean",
                 ),
             ]
@@ -305,7 +318,7 @@ controls = dbc.Card(
                 dbc.Label("Model Date", id='model-date-label'),
                 dcc.DatePickerRange(
                     id='model-date-picker',
-                    min_date_allowed=min_date,
+                    min_date_allowed=df.model_date.min(),
                     max_date_allowed=datetime.today(),
                     start_date=datetime.today() - timedelta(days=30), #HACK: Temporarily fixes the colorscale issue for >12 models
                     end_date=datetime.today(),
@@ -383,8 +396,6 @@ app.layout = dbc.Container(
     ],
     fluid=True,
 )
-
-
 
 @app.callback(
     Output("more-info-collapse", "is_open"),
@@ -491,7 +502,7 @@ def build_cards(dff, metric, model):
 def make_stat_cards(model, location, metric, start_date, end_date):
     '''Callback for the historical projections stats cards
     '''
-    dff = filter_df(model, location, metric, start_date, end_date)
+    dff = filter_df(df, model, location, metric, start_date, end_date)
 
     return build_cards(dff, metric, model)
 
@@ -509,14 +520,13 @@ def make_stat_cards(model, location, metric, start_date, end_date):
         Input("actual-values-toggle", "value"),
         Input("ihme-color-dropdown", "value"),
         Input("lanl-color-dropdown", "value")
-
     ],
 
 )
 def make_primary_graph(model, location, metric, start_date, end_date, log_scale, smoothed, window_size, actual_values, color_scale_ihme, color_scale_lanl):
     '''Callback for the primary historical projections line chart
     '''
-    dff = filter_df(model, location, metric, start_date, end_date)
+    dff = filter_df(df, model, location, metric, start_date, end_date)
 
     if smoothed:
         dff[f'rolling_{metric}'] = dff[metric].rolling(window=window_size).mean()
@@ -542,6 +552,13 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
 
 
     if 'confirmed' in metric or 'dea' in metric and actual_values:
+        if 'LANL' in dff.model_name.unique():
+            act_dff = dff[dff.model_name == 'LANL']
+            act_dff = act_dff[(act_dff.date <= act_dff.model_date) & (act_dff.model_date == act_dff.model_date.max())]
+        else:
+            act_dff = dff[(dff.date <= dff.model_date) & (dff.model_date == dff.model_date.max())]
+
+
         fig = px.line(
             dff[dff.date > dff.model_date],
             x='date',
@@ -554,7 +571,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
             hover_data=['model_name'],
         )
         actual = px.bar(
-            dff[(dff.date <= dff.model_date) & (dff.model_date == dff.model_date.max())],
+            act_dff,
             x='date',
             y= (f'rolling_{metric}' if smoothed else metric),
             hover_name='date',
