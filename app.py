@@ -78,8 +78,8 @@ app = dash.Dash(
                                 'href': 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css',
                                 'rel': 'stylesheet',
                                 'crossorigin': 'anonymous'
-                          },
-                        ],
+                            }
+                          ],
     meta_tags=[
         {"name": "viewport", "content": "width=device-width, initial-scale=1"}
     ]
@@ -128,8 +128,6 @@ app.index_string = '''
         (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
         ga('create', 'UA-164558144-1', 'auto');
         ga('send', 'pageview');
-        </script>
-        <script data-ad-client="ca-pub-3259423161421299" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
         </script>
     </head>
     <body>
@@ -353,8 +351,6 @@ app.layout = dbc.Container(
     fluid=True,
 )
 
-
-
 @app.callback(
     Output("more-info-collapse", "is_open"),
     [Input("more-info-button", "n_clicks")],
@@ -505,6 +501,13 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
 
 
     if 'confirmed' in metric or 'dea' in metric and actual_values:
+        if 'LANL' in dff.model_name.unique():
+            act_dff = dff[dff.model_name == 'LANL']
+            act_dff = act_dff[(act_dff.date <= act_dff.model_date) & (act_dff.model_date == act_dff.model_date.max())]
+        else:
+            act_dff = dff[(dff.date <= dff.model_date) & (dff.model_date == dff.model_date.max())]
+
+
         fig = px.line(
             dff[dff.date > dff.model_date],
             x='date',
@@ -517,7 +520,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
             hover_data=['model_name'],
         )
         actual = px.bar(
-            dff[(dff.date <= dff.model_date) & (dff.model_date == dff.model_date.max())],
+            act_dff,
             x='date',
             y=metric,
             hover_name='date',
