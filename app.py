@@ -506,6 +506,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
             act_dff = act_dff[(act_dff.date <= act_dff.model_date) & (act_dff.model_date == act_dff.model_date.max())]
         else:
             act_dff = dff[(dff.date <= dff.model_date) & (dff.model_date == dff.model_date.max())]
+        act_dff = act_dff.drop_duplicates(keep='first')
 
 
         fig = px.line(
