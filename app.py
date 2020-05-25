@@ -185,11 +185,42 @@ collapse_plot_options = html.Div(
                             switch=True,
                         ),
                         dbc.Tooltip(
-                            "For metrics with actual historical data (e.g.deaths/confirmed cases), plot actual values as bars and projected values as lines (Default: True)",
+                            "For metrics with actual historical data (e.g.deaths/confirmed cases), plot actual values "
+                            "as bars and projected values as lines (Default: True)",
                             target="actual-values-toggle",
                             placement='right',
                             offset=0,
                         ),
+                    ]
+                ),
+                dbc.FormGroup(
+                    #TODO: Link this boolean with the plot actual deaths and cases boolean
+                    [
+                        dbc.Checklist(
+                            options=[
+                                {"label": "Plot Smoothed Deaths and Cases", "value": False}
+                            ],
+                            value=False, #HACK: notice that this is a boolean
+                            id="smoothed-actual-values-toggle",
+                            switch=True,
+                        ),
+                        dbc.Tooltip(
+                            "For metrics with actual historical data (e.g.deaths/confirmed cases), plot rolling "
+                            "window of actual values as bars and projected values as lines (Default: False)",
+                            target="smoothed-actual-values-toggle",
+                            placement='right',
+                            offset=0,
+                        ),
+                        dcc.Input(
+                            #TODO: Offset this to be shifted below the toggle button?
+                            id="window_size",
+                            type="number",
+                            placeholder="Rolling window size. (Default: 7 days)",
+                            debounce=True,
+                            min=1,
+                            max=28,
+                            value=7
+                            )
                     ]
                 ),
                 dbc.FormGroup( #TODO: Fix Top and Left margins to align 
@@ -473,17 +504,23 @@ def make_stat_cards(model, location, metric, start_date, end_date):
         Input("model-date-picker", "start_date"),
         Input("model-date-picker", "end_date"),
         Input("log-scale-toggle", "value"),
+        Input("smoothed-actual-values-toggle", "value"),
+        Input("window_size", "value"),
         Input("actual-values-toggle", "value"),
         Input("ihme-color-dropdown", "value"),
         Input("lanl-color-dropdown", "value")
+
     ],
 
 )
-def make_primary_graph(model, location, metric, start_date, end_date, log_scale, actual_values, color_scale_ihme, color_scale_lanl):
+def make_primary_graph(model, location, metric, start_date, end_date, log_scale, smoothed, window_size, actual_values, color_scale_ihme, color_scale_lanl):
     '''Callback for the primary historical projections line chart
     '''
     dff = filter_df(model, location, metric, start_date, end_date)
-    
+
+    if smoothed:
+        dff[f'rolling_{metric}'] = dff[metric].rolling(window=window_size).mean()
+
     model_title = ' & '.join(dff.model_name.unique())
 
     plot_title = f'{model_title} - {location} - {column_translator[metric]}'
@@ -519,7 +556,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
         actual = px.bar(
             dff[(dff.date <= dff.model_date) & (dff.model_date == dff.model_date.max())],
             x='date',
-            y=metric,
+            y= (f'rolling_{metric}' if smoothed else metric),
             hover_name='date',
             color_discrete_sequence=['#696969']
         )
