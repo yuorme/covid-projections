@@ -47,20 +47,20 @@ def min_model_date():
 
 def metric_labels():
     df = pd.read_sql_query("SELECT * FROM projections limit 10", engine)
-    df = df.astype(table_dtypes)
+    df = df.astype(dict((k, table_dtypes[k]) for k in df.columns if k in table_dtypes))
     return sorted([{"label": column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.sort_values().tolist() ], key=lambda k: k['label'])
 
 def filter_df(model, location, metric, start_date, end_date):
 
-    filter_query = "SELECT * FROM {0} WHERE {0}.location_name = {1} AND {0}.model_name IN ({2}) AND {0}.model_date BETWEEN {1} AND {1} AND {0}.date > '2020-02-15' AND {0}.date < '2020-07-15' ORDER BY {0}.date"
-    filter_query = filter_query.format(table_name,'%s', ','.join(['%s'] * len(model)))
+    filter_query = "SELECT location_name, date, {3}, model_name, model_date, model_version, location_abbr FROM {0} WHERE {0}.location_name = {1} AND {0}.model_name IN ({2}) AND {0}.model_date BETWEEN {1} AND {1} AND {0}.date > '2020-02-15' AND {0}.date < '2020-07-15' ORDER BY {0}.date"
+    filter_query = filter_query.format(table_name,'%s', ','.join(['%s'] * len(model)), metric)
 
     dff = pd.read_sql_query(filter_query,engine, params=tuple(flatten((location, model, start_date, end_date))),
                             parse_dates=['model_date', 'date'])
 
 
     # there's probably a better way to do this instead of hard-coding the types
-    dff = dff.astype(table_dtypes)
+    dff = dff.astype(dict((k, table_dtypes[k]) for k in dff.columns if k in table_dtypes))
 
     dff.dropna(subset=[metric], inplace=True)
 
