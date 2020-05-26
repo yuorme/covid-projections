@@ -47,7 +47,6 @@ def min_model_date():
 
 def metric_labels():
     df = pd.read_sql_query("SELECT * FROM projections limit 10", engine)
-    df.drop(columns=['index'],inplace=True)
     df = df.astype(table_dtypes)
     return sorted([{"label": column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.sort_values().tolist() ], key=lambda k: k['label'])
 
@@ -59,7 +58,6 @@ def filter_df(model, location, metric, start_date, end_date):
     dff = pd.read_sql_query(filter_query,engine, params=tuple(flatten((location, model, start_date, end_date))),
                             parse_dates=['model_date', 'date'])
 
-    dff.drop(columns=['index'],inplace=True)
 
     # there's probably a better way to do this instead of hard-coding the types
     dff = dff.astype(table_dtypes)
@@ -497,8 +495,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     # Change y-axis scale depending on toggle value
     y_axis_type = ("log" if log_scale else "-")
     if y_axis_type == 'log':
-        dff = dff[dff[metric] > 3] #prevent tiny log scale values from showing up
-
+        dff = dff[dff[metric] > 3] # prevent tiny log scale values from showing up
 
     if 'confirmed' in metric or 'dea' in metric and actual_values:
         if 'LANL' in dff.model_name.unique():

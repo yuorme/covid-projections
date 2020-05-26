@@ -245,15 +245,19 @@ def create_projections_table():
     df['model_date'] = pd.to_datetime(df['model_version'].str[0:10].str.replace('_','-'))
     df['location_abbr'] = df['location_name'].map(us_state_abbrev)
     # df = df[df['model_date'] > (datetime.today() - timedelta(days=31))] # only loading model versions from the past 31 days
-
+    index_col = ['location_name', 'date', 'model_date', 'model_name']
+    df.set_index(index_col,inplace= True)
+    df = df[~df.index.duplicated()]
     # drop old table and insert new table
-    # df.to_sql(app_config['database_name'], con=engine, if_exists='replace', method='multi', chunksize=5000) #Todo: Do we want to specify data types in the table?
+    # df.to_sql(app_config['database_name'], con=engine, if_exists='replace', method='multi', chunksize=1000) #Todo: Do we want to specify data types in the table?
+    # 'ALTER TABLE projections ADD PRIMARY KEY (location_name, date, model_date, model_name);'
     # This upsert package requires us to name the index
-    df.index.name = 'index'
+    # df.index.name = 'index'
+
     upsert(engine=engine,
-       df=df,
-       table_name=app_config['database_name'],
-       if_row_exists='ignore', chunksize=1000,
+           df=df,
+           table_name=app_config['database_name'],
+           if_row_exists='ignore', chunksize=5000,
            add_new_columns=False,
            create_schema=False)
 
