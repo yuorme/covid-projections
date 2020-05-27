@@ -65,6 +65,7 @@ def filter_df(model, location, metric, start_date, end_date):
     dff.dropna(subset=[metric], inplace=True)
 
     dff['model_label'] = dff['model_name'].astype('str') + '-' + dff['model_date'].dt.strftime("%m/%d").str[1:]
+    dff['model_name'] = dff['model_name'].astype('str')
     dff = dff.sort_values(['model_label','date'])
 
     return dff
