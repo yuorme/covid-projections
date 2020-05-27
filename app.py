@@ -443,25 +443,9 @@ def build_cards(dff, metric, model):
 
     return cards
 
-@app.callback(
-    Output("stat-cards", "children"),
-    [
-        Input("model-dropdown", "value"),
-        Input("location-dropdown", "value"),
-        Input("metric-dropdown", "value"),
-        Input("model-date-picker", "start_date"),
-        Input("model-date-picker", "end_date")
-    ],
-)
-def make_stat_cards(model, location, metric, start_date, end_date):
-    '''Callback for the historical projections stats cards
-    '''
-    dff = filter_df(model, location, metric, start_date, end_date)
-
-    return build_cards(dff, metric, model)
 
 @app.callback(
-    Output("primary-graph", "figure"),
+    [Output("primary-graph", "figure"), Output("stat-cards", "children")],
     [
         Input("model-dropdown", "value"),
         Input("location-dropdown", "value"),
@@ -480,11 +464,13 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     '''
     dff = filter_df(model, location, metric, start_date, end_date)
 
+    cards = build_cards(dff, metric, model)
+
     model_title = ' & '.join(dff.model_name.unique())
 
     plot_title = f'{model_title} - {location} - {column_translator[metric]}'
 
-    #different sequential colorscales for different models    
+    #different sequential colorscales for different models
     num_models_ihme = len(dff[dff.model_name == 'IHME'].model_version.unique())
     num_models_lanl = len(dff[dff.model_name == 'LANL'].model_version.unique())
 
@@ -538,7 +524,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
             labels=column_translator,
             hover_name='model_version',
             hover_data=['model_name']
-        )       
+        )
 
     fig.layout.template = 'ggplot2'
     fig.update_layout(
@@ -569,7 +555,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     if y_axis_type == 'log':
         fig.update_layout(yaxis = {'dtick': 1})
 
-    return fig
+    return fig, cards
 
 if __name__ == "__main__":
     app.run_server(debug=app_config['debug'], port=5000)
