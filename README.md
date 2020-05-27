@@ -50,7 +50,16 @@ Data should be included but the scraper can be run using:
 `python projections-scraper.py`
 
 #### Run Dashboard
-To run locally, you'll need to set debug mode to True in `config.py`. This prevents HTTPS protocol from being enforced. Then run ```python app.py``` and then point your browser to `127.0.0.1:5000`
+To run locally, you'll need to set debug mode to True in `config.py`.
+This prevents HTTPS protocol from being enforced. 
+Also, you need to add the postgres variables to your environment (`COVID_PRED_POSTGRES_PASS,COVID_PRED_RDS_URL,COVID_PRED_RDS_SSL_CERT`). 
+We suggest creating a `.env` file and using [python-dotenv](https://github.com/theskumar/python-dotenv) in `config.py`
+```python
+# config.py
+from dotenv import load_dotenv
+load_dotenv()
+``` 
+Then run ```python app.py``` and then point your browser to `127.0.0.1:5000`
 
 
 

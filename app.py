@@ -5,6 +5,8 @@ import pandas as pd
 import numpy as np
 import os
 from datetime import datetime, timedelta
+from sqlalchemy import create_engine
+from collections.abc import Iterable
 
 import dash
 import dash_core_components as dcc
@@ -19,69 +21,52 @@ import plotly.express as px
 from region_abbreviations import us_state_abbrev
 from more_info import more_info_alert
 from column_translater import column_translator
+from plot_option_data import csv_dtypes, table_dtypes
 from config import app_config, plotly_config
 
-#load data
-def load_projections():
+# make sqlite connection
+engine = create_engine(app_config['sqlalchemy_database_uri'])
+table_name = app_config['database_name']
 
-    df = pd.read_csv(os.path.join('data','merged_projections.csv'), nrows=50)
-    
-    dtypes = [
-        'category','str',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'float32','float32','float32',
-        'category','category',
-        'float32','float32','float32',
-        'float32','float32','float32',
-    ]
+def flatten(items):
+    """Yield items from any nested iterable; see Reference."""
+    for x in items:
+        if isinstance(x, Iterable) and not isinstance(x, (str, bytes)):
+            for sub_x in flatten(x):
+                yield sub_x
+        else:
+            yield x
 
-    pd_dtypes = dict(zip(df.columns, dtypes))
+def unique_location_names():
+    df = pd.read_sql_query("SELECT DISTINCT location_name FROM projections", engine)
+    return list(flatten(df.values))
 
-    df = pd.read_csv(os.path.join('data','merged_projections.csv'), dtype=pd_dtypes)
-    df = df[df.model_version != '2020_04_05.05.us']
+def min_model_date():
+    df = pd.read_sql_query("SELECT MIN(model_date) FROM projections", engine)
+    return df.iloc[0,0]
 
-    df['date'] = pd.to_datetime(df['date'])
-    df['model_date'] = pd.to_datetime(df['model_version'].str[0:10].str.replace('_','-'))
-    df['location_abbr'] = df['location_name'].map(us_state_abbrev)
-    df = df[df['model_date'] > (datetime.today() - timedelta(days=31))] # only loading model versions from the past 31 days
+def metric_labels():
+    df = pd.read_sql_query("SELECT * FROM projections limit 10", engine)
+    df = df.astype(dict((k, table_dtypes[k]) for k in df.columns if k in table_dtypes))
+    return sorted([{"label": column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.sort_values().tolist() ], key=lambda k: k['label'])
 
-    dtype_reducer(df)
-    print('final mem usage:', df.info(memory_usage='deep'))
+def filter_df(model, location, metric, start_date, end_date):
 
-    return df
+    filter_query = "SELECT location_name, date, {3}, model_name, model_date, model_version, location_abbr FROM {0} WHERE {0}.location_name = {1} AND {0}.model_name IN ({2}) AND {0}.model_date BETWEEN {1} AND {1} AND {0}.date > '2020-02-15' AND {0}.date < '2020-07-15' ORDER BY {0}.date"
+    filter_query = filter_query.format(table_name,'%s', ','.join(['%s'] * len(model)), metric)
 
-def dtype_reducer(df):
-    '''converts float32 to float16 where possible
-    '''
+    dff = pd.read_sql_query(filter_query,engine, params=tuple(flatten((location, model, start_date, end_date))),
+                            parse_dates=['model_date', 'date'])
 
-    for c in df.select_dtypes(include=['float32','float64']).columns:
-        if df[c].max() <= np.finfo('float16').max:
-            print('converting to float16', c)
-            df[c] = df[c].astype('float16')
 
-def filter_df(df, model, location, metric, start_date, end_date):
-
-    dff = df.copy()
-
-    dff = dff[
-        (dff.location_name == location) & 
-        (dff.model_name.isin(model)) &
-        (dff.model_date >= start_date) &
-        (dff.model_date <= end_date) & 
-        (dff.date > '2020-02-15') &
-        (dff.date < '2020-07-15')
-        ]
+    # there's probably a better way to do this instead of hard-coding the types
+    dff = dff.astype(dict((k, table_dtypes[k]) for k in dff.columns if k in table_dtypes))
 
     dff.dropna(subset=[metric], inplace=True)
 
     dff['model_label'] = dff['model_name'].astype('str') + '-' + dff['model_date'].dt.strftime("%m/%d").str[1:]
+    dff['model_name'] = dff['model_name'].astype('str')
+    dff = dff.sort_values(['model_label','date'])
 
     return dff
 
@@ -93,8 +78,8 @@ app = dash.Dash(
                                 'href': 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css',
                                 'rel': 'stylesheet',
                                 'crossorigin': 'anonymous'
-                          }
-                        ],
+                            }
+                          ],
     meta_tags=[
         {"name": "viewport", "content": "width=device-width, initial-scale=1"}
     ]
@@ -104,9 +89,8 @@ app.title = title
 server = app.server #need this for heroku - gunicorn deploy
 
 # This forces https for the site
-Talisman(app.server, content_security_policy=None)
-
-df = load_projections()
+if not app_config['debug']:
+    Talisman(app.server, content_security_policy=None)
 
 # Make a list of all of the U.S. locations
 us_locations = list(us_state_abbrev.keys()) + \
@@ -116,7 +100,7 @@ us_locations.sort()
 # Move 'United States of America' to the front
 us_locations.insert(0, us_locations.pop(us_locations.index('United States of America')))
 
-non_us_locations = list( set(df.location_name.unique()) - set(us_locations))
+non_us_locations = list(set(unique_location_names()) - set(us_locations))
 non_us_locations.sort()
 
 # combine the two lists and make sure we don't somehow have duplicates while keeping the order we created
@@ -127,6 +111,9 @@ all_locations = list(dict.fromkeys(all_locations))
 excluded_colorscales = ['plotly3','gray','haline','ice','solar','thermal']
 named_colorscales = [s for s in px.colors.named_colorscales() if s not in excluded_colorscales]
 style_lists = [[style,getattr(px.colors.sequential,style)] for style in dir(px.colors.sequential) if style.lower() in named_colorscales and len(getattr(px.colors.sequential,style)) >= 12]
+
+# get minimum model date
+min_date = min_model_date()
 
 
 app.index_string = '''
@@ -234,7 +221,7 @@ collapse_plot_options = html.Div(
                             )
                     ]
                 ),
-                dbc.FormGroup( #TODO: Fix Top and Left margins to align 
+                dbc.FormGroup( #TODO: Fix Top and Left margins to align
                     [
                         dbc.Label("IHME Colorscale"),
                         dbc.Col(
@@ -306,9 +293,7 @@ controls = dbc.Card(
                 dbc.Label("Metric"),
                 dcc.Dropdown(
                     id="metric-dropdown",
-                    options=[
-                        {"label": column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.sort_values().tolist() #TODO: Might be nice if metrics were sorted alphabetically by label rather than column names
-                    ],
+                    options=metric_labels(),
                     value="deaths_mean",
                 ),
             ]
@@ -318,7 +303,7 @@ controls = dbc.Card(
                 dbc.Label("Model Date", id='model-date-label'),
                 dcc.DatePickerRange(
                     id='model-date-picker',
-                    min_date_allowed=df.model_date.min(),
+                    min_date_allowed=min_date,
                     max_date_allowed=datetime.today(),
                     start_date=datetime.today() - timedelta(days=30), #HACK: Temporarily fixes the colorscale issue for >12 models
                     end_date=datetime.today(),
@@ -396,6 +381,8 @@ app.layout = dbc.Container(
     ],
     fluid=True,
 )
+
+
 
 @app.callback(
     Output("more-info-collapse", "is_open"),
@@ -502,7 +489,7 @@ def build_cards(dff, metric, model):
 def make_stat_cards(model, location, metric, start_date, end_date):
     '''Callback for the historical projections stats cards
     '''
-    dff = filter_df(df, model, location, metric, start_date, end_date)
+    dff = filter_df(model, location, metric, start_date, end_date)
 
     return build_cards(dff, metric, model)
 
@@ -526,7 +513,7 @@ def make_stat_cards(model, location, metric, start_date, end_date):
 def make_primary_graph(model, location, metric, start_date, end_date, log_scale, smoothed, window_size, actual_values, color_scale_ihme, color_scale_lanl):
     '''Callback for the primary historical projections line chart
     '''
-    dff = filter_df(df, model, location, metric, start_date, end_date)
+    dff = filter_df(model, location, metric, start_date, end_date)
 
     if smoothed:
         dff[f'rolling_{metric}'] = dff[metric].rolling(window=window_size).mean()
@@ -548,8 +535,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     # Change y-axis scale depending on toggle value
     y_axis_type = ("log" if log_scale else "-")
     if y_axis_type == 'log':
-        dff = dff[dff[metric] > 3] #prevent tiny log scale values from showing up
-
+        dff = dff[dff[metric] > 3] # prevent tiny log scale values from showing up
 
     if 'confirmed' in metric or 'dea' in metric and actual_values:
         if 'LANL' in dff.model_name.unique():
@@ -557,6 +543,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
             act_dff = act_dff[(act_dff.date <= act_dff.model_date) & (act_dff.model_date == act_dff.model_date.max())]
         else:
             act_dff = dff[(dff.date <= dff.model_date) & (dff.model_date == dff.model_date.max())]
+        act_dff = act_dff.drop_duplicates(keep='first')
 
 
         fig = px.line(
