@@ -65,6 +65,7 @@ def filter_df(model, location, metric, start_date, end_date):
     dff.dropna(subset=[metric], inplace=True)
 
     dff['model_label'] = dff['model_name'].astype('str') + '-' + dff['model_date'].dt.strftime("%m/%d").str[1:]
+    dff = dff.sort_values(['model_label','date'])
 
     return dff
 
@@ -477,7 +478,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     '''Callback for the primary historical projections line chart
     '''
     dff = filter_df(model, location, metric, start_date, end_date)
-    
+
     model_title = ' & '.join(dff.model_name.unique())
 
     plot_title = f'{model_title} - {location} - {column_translator[metric]}'
