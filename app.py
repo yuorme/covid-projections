@@ -515,9 +515,6 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     '''
     dff = filter_df(model, location, metric, start_date, end_date)
 
-    if smoothed:
-        dff[f'rolling_{metric}'] = dff[metric].rolling(window=window_size).mean()
-
     model_title = ' & '.join(dff.model_name.unique())
 
     plot_title = f'{model_title} - {location} - {column_translator[metric]}'
@@ -543,6 +540,8 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
             act_dff = act_dff[(act_dff.date <= act_dff.model_date) & (act_dff.model_date == act_dff.model_date.max())]
         else:
             act_dff = dff[(dff.date <= dff.model_date) & (dff.model_date == dff.model_date.max())]
+        if smoothed:
+            act_dff[f'rolling_{metric}'] = act_dff[metric].rolling(window=window_size).mean()
         act_dff = act_dff.drop_duplicates(keep='first')
 
 
