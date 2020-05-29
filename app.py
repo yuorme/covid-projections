@@ -72,23 +72,46 @@ def filter_df(model, location, metric, start_date, end_date):
     return dff
 
 
-def calculate_rmse(group, act_values, metric, smoothed):
-    # filter the group to only have observations >= first date of projection
+def calculate_rmse(group, act_values, metric):
+    '''Takes a dataframe of projections, grouped by model, and calculates the RMSE for each model'''
     group = group[group.date >= group.model_date]
     group = group.drop(columns='date')
     act_values = act_values.drop(columns='date') if 'date' in act_values.columns else act_values
     joined_data = group.join(other=act_values, on='date', how='left',lsuffix='_proj', rsuffix='_act')
-    if smoothed:
-        rmse = np.sqrt(np.mean((joined_data[f'{metric}_proj'] - joined_data[ f'rolling_{metric}']) ** 2))
-        number_of_data_pts = joined_data[f'rolling_{metric}'].notnull().sum()
-    else:
-        rmse = np.sqrt(np.mean((joined_data[f'{metric}_proj'] - joined_data[ f'{metric}_act']) ** 2))
-        number_of_data_pts = joined_data[f'{metric}_act'].notnull().sum()
+    rmse = np.sqrt(np.mean((joined_data[f'{metric}_proj'] - joined_data[ f'rolling_{metric}']) ** 2))
+    number_of_data_pts = joined_data[f'rolling_{metric}'].notnull().sum()
     days_since_pred = datetime.today().date() - joined_data.model_date.min().date()
     days_since_pred = str(days_since_pred)[-18:-9]
 
     return pd.Series(dict(rmse = rmse, days_since_pred = days_since_pred, num_data_pts= number_of_data_pts))
 
+def make_rmse_table(dff, act_dff, metric):
+    '''
+
+    :param dff: Dataframe of projections
+    :param act_dff: Dataframe of actual data
+    :param metric: metric of interest
+    :return: dictionary with rmse for each projection
+    '''
+    act_values = act_dff[['location_name', 'date', metric]]
+    act_values[f'rolling_{metric}'] = act_values[metric].rolling(window=7).mean()
+    act_values.index = act_values.date
+
+    proj_values= dff[['location_name', 'date', metric, 'model_label', "model_date"]]
+    proj_values.index = proj_values.date
+
+    act_values.drop_duplicates(keep='first')
+    proj_values.drop_duplicates(keep='first')
+
+    # group projections by model_label
+    grouped = proj_values.groupby('model_label')
+    rmse_data = grouped.apply(calculate_rmse,act_values=act_values,metric=metric)
+    rmse_data = rmse_data[rmse_data['rmse'] != 0]
+    rmse_data['rmse'] = rmse_data.rmse.round(3)
+    rmse_data = rmse_data.sort_values(['rmse','days_since_pred'])
+    rmse_data = rmse_data.reset_index()
+    rmse_data = rmse_data.to_dict('records')
+    return rmse_data
 
 #initialize app
 app = dash.Dash(
@@ -254,7 +277,8 @@ collapse_plot_options = html.Div(
                         ),
                         dbc.Tooltip(
                             "For metrics with actual historical data, display a table with the root-mean-square error "
-                            "of each model's projection compared to the real data reported. The calculation includes "
+                            "of each model's projection compared to the real data smoothed with a seven-day rolling window. "
+                            "The calculation includes "
                             "data from the day the model was released until the most recent day. (Default: False)",
                             target="show-rmse-toggle",
                             placement='right',
@@ -610,26 +634,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
         fig.add_trace(actual.data[0])
 
         if rmse_table:
-            if smoothed:
-                act_values = act_dff[['location_name', 'date', metric, f'rolling_{metric}']]
-            else:
-                act_values = act_dff[['location_name', 'date', metric]]
-            act_values.index = act_values.date
-
-            proj_values= dff[['location_name', 'date', metric, 'model_label', "model_date"]]
-            proj_values.index = proj_values.date
-
-            act_values.drop_duplicates(keep='first')
-            proj_values.drop_duplicates(keep='first')
-
-            # group projections by model_label
-            grouped = proj_values.groupby('model_label')
-            rmse_data = grouped.apply(calculate_rmse,act_values=act_values,metric=metric, smoothed=smoothed)
-            rmse_data = rmse_data[rmse_data['rmse'] != 0]
-            rmse_data['rmse'] = rmse_data.rmse.round(3)
-            rmse_data = rmse_data.sort_values(['rmse','days_since_pred'])
-            rmse_data = rmse_data.reset_index()
-            rmse_data = rmse_data.to_dict('records')
+            rmse_data = make_rmse_table(dff, act_dff, metric)
             table_display = {'display':'block'}
 
 
