@@ -14,6 +14,7 @@ import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from flask_talisman import Talisman
+import dash_table
 
 import plotly.graph_objects as go
 import plotly.express as px
@@ -69,6 +70,48 @@ def filter_df(model, location, metric, start_date, end_date):
     dff = dff.sort_values(['model_label','date'])
 
     return dff
+
+
+def calculate_rmse(group, act_values, metric):
+    '''Takes a dataframe of projections, grouped by model, and calculates the RMSE for each model'''
+    group = group[group.date >= group.model_date]
+    group = group.drop(columns='date')
+    act_values = act_values.drop(columns='date') if 'date' in act_values.columns else act_values
+    joined_data = group.join(other=act_values, on='date', how='left',lsuffix='_proj', rsuffix='_act')
+    rmse = np.sqrt(np.mean((joined_data[f'{metric}_proj'] - joined_data[ f'rolling_{metric}']) ** 2))
+    number_of_data_pts = joined_data[f'rolling_{metric}'].notnull().sum()
+    days_since_pred = datetime.today().date() - joined_data.model_date.min().date()
+    days_since_pred = str(days_since_pred)[-18:-9]
+
+    return pd.Series(dict(rmse = rmse, days_since_pred = days_since_pred, num_data_pts= number_of_data_pts))
+
+def make_rmse_table(dff, act_dff, metric):
+    '''
+
+    :param dff: Dataframe of projections
+    :param act_dff: Dataframe of actual data
+    :param metric: metric of interest
+    :return: dictionary with rmse for each projection
+    '''
+    act_values = act_dff[['location_name', 'date', metric]]
+    act_values[f'rolling_{metric}'] = act_values[metric].rolling(window=7).mean()
+    act_values.index = act_values.date
+
+    proj_values= dff[['location_name', 'date', metric, 'model_label', "model_date"]]
+    proj_values.index = proj_values.date
+
+    act_values.drop_duplicates(keep='first')
+    proj_values.drop_duplicates(keep='first')
+
+    # group projections by model_label
+    grouped = proj_values.groupby('model_label')
+    rmse_data = grouped.apply(calculate_rmse,act_values=act_values,metric=metric)
+    rmse_data = rmse_data[rmse_data['rmse'] != 0]
+    rmse_data['rmse'] = rmse_data.rmse.round(3)
+    rmse_data = rmse_data.sort_values(['rmse','days_since_pred'])
+    rmse_data = rmse_data.reset_index()
+    rmse_data = rmse_data.to_dict('records')
+    return rmse_data
 
 #initialize app
 app = dash.Dash(
@@ -183,14 +226,67 @@ collapse_plot_options = html.Div(
                             switch=True,
                         ),
                         dbc.Tooltip(
-                            "For metrics with actual historical data (e.g.deaths/confirmed cases), plot actual values as bars and projected values as lines (Default: True)",
+                            "For metrics with actual historical data (e.g.deaths/confirmed cases), plot actual values "
+                            "as bars and projected values as lines (Default: True)",
                             target="actual-values-toggle",
                             placement='right',
                             offset=0,
                         ),
                     ]
                 ),
-                dbc.FormGroup( #TODO: Fix Top and Left margins to align 
+                dbc.FormGroup(
+                    #TODO: Link this boolean with the plot actual deaths and cases boolean
+                    [
+                        dbc.Checklist(
+                            options=[
+                                {"label": "Plot Smoothed Deaths and Cases", "value": False}
+                            ],
+                            value=False, #HACK: notice that this is a boolean
+                            id="smoothed-actual-values-toggle",
+                            switch=True,
+                        ),
+                        dbc.Tooltip(
+                            "For metrics with actual historical data (e.g.deaths/confirmed cases), plot rolling "
+                            "window of actual values as bars and projected values as lines (Default: False)",
+                            target="smoothed-actual-values-toggle",
+                            placement='right',
+                            offset=0,
+                        ),
+                        dcc.Input(
+                            #TODO: Offset this to be shifted below the toggle button?
+                            id="window_size",
+                            type="number",
+                            placeholder="Rolling window size. (Default: 7 days)",
+                            debounce=True,
+                            min=1,
+                            max=28,
+                            value=7
+                            )
+                    ]
+                ),
+                dbc.FormGroup(
+                    #TODO: Link this boolean with the plot actual deaths and cases boolean
+                    [
+                        dbc.Checklist(
+                            options=[
+                                {"label": "Display RMSE table", "value": False}
+                            ],
+                            value=False, #HACK: notice that this is a boolean
+                            id="show-rmse-toggle",
+                            switch=True,
+                        ),
+                        dbc.Tooltip(
+                            "For metrics with actual historical data, display a table with the root-mean-square error "
+                            "of each model's projection compared to the real data smoothed with a seven-day rolling window. "
+                            "The calculation includes "
+                            "data from the day the model was released until the most recent day. (Default: False)",
+                            target="show-rmse-toggle",
+                            placement='right',
+                            offset=0,
+                        )
+                    ]
+                ),
+                dbc.FormGroup( #TODO: Fix Top and Left margins to align
                     [
                         dbc.Label("IHME Colorscale"),
                         dbc.Col(
@@ -299,7 +395,19 @@ app.layout = dbc.Container(
         dbc.Row(
             [
                 dbc.Col(controls, md=3),
-                dbc.Col(dcc.Graph(id="primary-graph", config=plotly_config), md=9),
+                dbc.Col([dcc.Graph(id="primary-graph", config=plotly_config),
+                         dbc.Col(
+                             html.Div(id='table-container', style= {'display': 'none'}, children=[
+                                dash_table.DataTable(
+                                    id='rmse-table',
+                                    columns=[{"name": value, "id": key } for key,value in {'model_label': 'Model Label','rmse':'RMSE',
+                                                                                       'days_since_pred':'Days Since Prediction',
+                                                                                       'num_data_pts':'Number of Data Points'}.items()]
+                                )
+                            ]), md=6, align='center'
+                             )
+
+                         ], md=9)
             ],
             align="center",
         ),
@@ -350,6 +458,8 @@ app.layout = dbc.Container(
     ],
     fluid=True,
 )
+
+
 
 @app.callback(
     Output("more-info-collapse", "is_open"),
@@ -445,7 +555,8 @@ def build_cards(dff, metric, model):
 
 
 @app.callback(
-    [Output("primary-graph", "figure"), Output("stat-cards", "children")],
+    [Output("primary-graph", "figure"), Output("stat-cards", "children"), Output('rmse-table', 'data'),
+     Output('table-container', 'style')],
     [
         Input("model-dropdown", "value"),
         Input("location-dropdown", "value"),
@@ -453,18 +564,24 @@ def build_cards(dff, metric, model):
         Input("model-date-picker", "start_date"),
         Input("model-date-picker", "end_date"),
         Input("log-scale-toggle", "value"),
+        Input("smoothed-actual-values-toggle", "value"),
+        Input("window_size", "value"),
         Input("actual-values-toggle", "value"),
         Input("ihme-color-dropdown", "value"),
-        Input("lanl-color-dropdown", "value")
+        Input("lanl-color-dropdown", "value"),
+        Input("show-rmse-toggle", "value")
     ],
 
 )
-def make_primary_graph(model, location, metric, start_date, end_date, log_scale, actual_values, color_scale_ihme, color_scale_lanl):
+def make_primary_graph(model, location, metric, start_date, end_date, log_scale, smoothed, window_size, actual_values, color_scale_ihme, color_scale_lanl, rmse_table):
     '''Callback for the primary historical projections line chart
     '''
     dff = filter_df(model, location, metric, start_date, end_date)
 
     cards = build_cards(dff, metric, model)
+
+    rmse_data = [{}]
+    table_display = {'display':'none'}
 
     model_title = ' & '.join(dff.model_name.unique())
 
@@ -491,6 +608,8 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
             act_dff = act_dff[(act_dff.date <= act_dff.model_date) & (act_dff.model_date == act_dff.model_date.max())]
         else:
             act_dff = dff[(dff.date <= dff.model_date) & (dff.model_date == dff.model_date.max())]
+        if smoothed:
+            act_dff[f'rolling_{metric}'] = act_dff[metric].rolling(window=window_size).mean()
         act_dff = act_dff.drop_duplicates(keep='first')
 
 
@@ -508,11 +627,17 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
         actual = px.bar(
             act_dff,
             x='date',
-            y=metric,
+            y= (f'rolling_{metric}' if smoothed else metric),
             hover_name='date',
             color_discrete_sequence=['#696969']
         )
         fig.add_trace(actual.data[0])
+
+        if rmse_table:
+            rmse_data = make_rmse_table(dff, act_dff, metric)
+            table_display = {'display':'block'}
+
+
     else:
         fig = px.line(
             dff,
@@ -555,7 +680,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
     if y_axis_type == 'log':
         fig.update_layout(yaxis = {'dtick': 1})
 
-    return fig, cards
+    return fig, cards, rmse_data, table_display
 
 if __name__ == "__main__":
     app.run_server(debug=app_config['debug'], port=5000)
