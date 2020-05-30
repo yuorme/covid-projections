@@ -346,7 +346,8 @@ app.layout = dbc.Container(
             ],
             color="dark",
             dark=True,
-        )
+        ),
+    html.Div(id='graph_data', style={'display': 'none'})
     ],
     fluid=True,
 )
@@ -443,10 +444,26 @@ def build_cards(dff, metric, model):
 
     return cards
 
+@app.callback(
+    Output('graph_data', 'children'),
+    [
+        Input("model-dropdown", "value"),
+        Input("location-dropdown", "value"),
+        Input("metric-dropdown", "value"),
+        Input("model-date-picker", "start_date"),
+        Input("model-date-picker", "end_date")
+    ]
+)
+def get_data(model, location, metric, start_date, end_date):
+    '''Query SQL table for data and store the data as a dictionary client-side'''
+    dff = filter_df(model, location, metric, start_date, end_date)
+    return dff.to_json(date_format='iso', orient='split')
+
 
 @app.callback(
     [Output("primary-graph", "figure"), Output("stat-cards", "children")],
     [
+        Input('graph_data', 'children'),
         Input("model-dropdown", "value"),
         Input("location-dropdown", "value"),
         Input("metric-dropdown", "value"),
@@ -459,10 +476,15 @@ def build_cards(dff, metric, model):
     ],
 
 )
-def make_primary_graph(model, location, metric, start_date, end_date, log_scale, actual_values, color_scale_ihme, color_scale_lanl):
+def make_primary_graph(existing_data, model, location, metric, start_date, end_date, log_scale, actual_values, color_scale_ihme, color_scale_lanl):
     '''Callback for the primary historical projections line chart
     '''
-    dff = filter_df(model, location, metric, start_date, end_date)
+    # if we don't already have existing stored data, get the data from the table
+    if existing_data is None:
+        dff = filter_df(model, location, metric, start_date, end_date)
+    else:
+        dff = pd.read_json(existing_data, orient='split')
+        dff= dff.astype(dict((k, table_dtypes[k]) for k in dff.columns if k in table_dtypes))
 
     cards = build_cards(dff, metric, model)
 
