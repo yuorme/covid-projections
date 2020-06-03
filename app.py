@@ -86,7 +86,9 @@ TIMEOUT = 60
 
 @cache.memoize(timeout=TIMEOUT)
 def filter_df(model, location, metric, start_date, end_date):
-
+    # Check if any of the letters in the metric name are uppercase
+    if any(letter.isupper() for letter in metric):
+        metric = f"'{metric}'"
     filter_query = "SELECT location_name, date, {3}, model_name, model_date, model_version, location_abbr FROM {0} WHERE {0}.location_name = {1} AND {0}.model_name IN ({2}) AND {0}.model_date BETWEEN {1} AND {1} AND {0}.date > '2020-02-15' AND {0}.date < '2020-07-15' ORDER BY {0}.date"
     filter_query = filter_query.format(table_name,'%s', ','.join(['%s'] * len(model)), metric)
 
