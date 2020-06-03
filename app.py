@@ -29,6 +29,7 @@ from config import app_config, plotly_config
 engine = create_engine(app_config['sqlalchemy_database_uri'])
 table_name = app_config['database_name']
 
+
 def flatten(items):
     """Yield items from any nested iterable; see Reference."""
     for x in items:
@@ -38,19 +39,41 @@ def flatten(items):
         else:
             yield x
 
+
 def unique_location_names():
     df = pd.read_sql_query("SELECT DISTINCT location_name FROM projections", engine)
     return list(flatten(df.values))
 
+
 def min_model_date():
     df = pd.read_sql_query("SELECT MIN(model_date) FROM projections", engine)
     return df.iloc[0,0]
+
 
 def metric_labels():
     df = pd.read_sql_query("SELECT * FROM projections limit 10", engine)
     df = df.astype(dict((k, table_dtypes[k]) for k in df.columns if k in table_dtypes))
     return sorted([{"label": column_translator[col], "value": col} for col in df.select_dtypes(include=np.number).columns.sort_values().tolist() ], key=lambda k: k['label'])
 
+
+def filter_df(model, location, metric, start_date, end_date):
+    # Check if any of the letters in the metric name are uppercase
+    filter_query = "SELECT location_name, date, {3}, model_name, model_date, model_version, location_abbr FROM {0} WHERE {0}.location_name = {1} AND {0}.model_name IN ({2}) AND {0}.model_date BETWEEN {1} AND {1} AND {0}.date > '2020-02-15' AND {0}.date < '2020-07-15' ORDER BY {0}.date"
+    filter_query = filter_query.format(table_name,'%s', ','.join(['%s'] * len(model)), f'"{metric}"' if any(letter.isupper() for letter in metric) else metric)
+
+    dff = pd.read_sql_query(filter_query,engine, params=tuple(flatten((location, model, start_date, end_date))),
+                            parse_dates=['model_date', 'date'])
+
+    # there's probably a better way to do this instead of hard-coding the types
+    dff = dff.astype(dict((k, table_dtypes[k]) for k in dff.columns if k in table_dtypes))
+
+    dff.dropna(subset=[metric], inplace=True)
+
+    dff['model_label'] = dff['model_name'].astype('str') + '-' + dff['model_date'].dt.strftime("%m/%d").str[1:]
+    dff['model_name'] = dff['model_name'].astype('str')
+    dff = dff.sort_values(['model_label','date'])
+
+    return dff
 
 
 #initialize app
@@ -74,35 +97,6 @@ server = app.server #need this for heroku - gunicorn deploy
 # This forces https for the site
 if not app_config['debug']:
     Talisman(app.server, content_security_policy=None)
-
-
-cache = Cache(app.server, config={
-    'CACHE_TYPE': 'filesystem',
-    'CACHE_DIR': 'cache-directory'
-})
-
-TIMEOUT = 60
-
-
-@cache.memoize(timeout=TIMEOUT)
-def filter_df(model, location, metric, start_date, end_date):
-    # Check if any of the letters in the metric name are uppercase
-    filter_query = "SELECT location_name, date, {3}, model_name, model_date, model_version, location_abbr FROM {0} WHERE {0}.location_name = {1} AND {0}.model_name IN ({2}) AND {0}.model_date BETWEEN {1} AND {1} AND {0}.date > '2020-02-15' AND {0}.date < '2020-07-15' ORDER BY {0}.date"
-    filter_query = filter_query.format(table_name,'%s', ','.join(['%s'] * len(model)), f'"{metric}"' if any(letter.isupper() for letter in metric) else metric)
-
-    dff = pd.read_sql_query(filter_query,engine, params=tuple(flatten((location, model, start_date, end_date))),
-                            parse_dates=['model_date', 'date'])
-
-    # there's probably a better way to do this instead of hard-coding the types
-    dff = dff.astype(dict((k, table_dtypes[k]) for k in dff.columns if k in table_dtypes))
-
-    dff.dropna(subset=[metric], inplace=True)
-
-    dff['model_label'] = dff['model_name'].astype('str') + '-' + dff['model_date'].dt.strftime("%m/%d").str[1:]
-    dff['model_name'] = dff['model_name'].astype('str')
-    dff = dff.sort_values(['model_label','date'])
-
-    return dff
 
 
 # Make a list of all of the U.S. locations
