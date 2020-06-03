@@ -39,4 +39,3 @@ Werkzeug==1.0.1
 win-inet-pton==1.1.0
 wincertstore==0.2
 pangres==2.1
-Flask-Caching==1.8.0
