@@ -28,6 +28,7 @@ from config import app_config, plotly_config
 engine = create_engine(app_config['sqlalchemy_database_uri'])
 table_name = app_config['database_name']
 
+
 def flatten(items):
     """Yield items from any nested iterable; see Reference."""
     for x in items:
@@ -37,13 +38,16 @@ def flatten(items):
         else:
             yield x
 
+
 def unique_location_names():
     df = pd.read_sql_query("SELECT DISTINCT location_name FROM projections", engine)
     return list(flatten(df.values))
 
+
 def min_model_date():
     df = pd.read_sql_query("SELECT MIN(model_date) FROM projections", engine)
     return df.iloc[0,0]
+
 
 def metric_labels():
     df = pd.read_sql_query("SELECT * FROM projections limit 10", engine)
@@ -91,6 +95,10 @@ server = app.server #need this for heroku - gunicorn deploy
 if not app_config['debug']:
     Talisman(app.server, content_security_policy=None)
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4966bc6... Remove caching stuff
 # Make a list of all of the U.S. locations
 us_locations = list(us_state_abbrev.keys()) + \
         ['Other Counties, WA', 'King and Snohomish Counties (excluding Life Care Center),\
