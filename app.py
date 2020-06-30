@@ -52,7 +52,15 @@ def metric_labels():
 
 def filter_df(model, location, metric, start_date, end_date):
 
-    filter_query = "SELECT location_name, date, {3}, model_name, model_date, model_version, location_abbr FROM {0} WHERE {0}.location_name = {1} AND {0}.model_name IN ({2}) AND {0}.model_date BETWEEN {1} AND {1} AND {0}.date > '2020-02-15' AND {0}.date < '2020-07-15' ORDER BY {0}.date"
+    filter_query = '''
+    SELECT location_name, date, {3}, model_name, model_date, model_version, location_abbr 
+    FROM {0} 
+    WHERE {0}.location_name = {1} 
+    AND {0}.model_name IN ({2}) 
+    AND {0}.model_date BETWEEN {1} 
+    AND {1} AND {0}.date > '2020-02-15'  
+    ORDER BY {0}.date
+    '''
     filter_query = filter_query.format(table_name,'%s', ','.join(['%s'] * len(model)), metric)
 
     dff = pd.read_sql_query(filter_query,engine, params=tuple(flatten((location, model, start_date, end_date))),
@@ -67,6 +75,7 @@ def filter_df(model, location, metric, start_date, end_date):
     dff['model_label'] = dff['model_name'].astype('str') + '-' + dff['model_date'].dt.strftime("%m/%d").str[1:]
     dff['model_name'] = dff['model_name'].astype('str')
     dff = dff.sort_values(['model_label','date'])
+    
 
     return dff
 
@@ -183,14 +192,45 @@ collapse_plot_options = html.Div(
                             switch=True,
                         ),
                         dbc.Tooltip(
-                            "For metrics with actual historical data (e.g.deaths/confirmed cases), plot actual values as bars and projected values as lines (Default: True)",
+                            "For metrics with actual historical data (e.g.deaths/confirmed cases), plot actual values "
+                            "as bars and projected values as lines (Default: True)",
                             target="actual-values-toggle",
                             placement='right',
                             offset=0,
                         ),
                     ]
                 ),
-                dbc.FormGroup( #TODO: Fix Top and Left margins to align 
+                dbc.FormGroup(
+                    #TODO: Link this boolean with the plot actual deaths and cases boolean
+                    [
+                        dbc.Checklist(
+                            options=[
+                                {"label": "Plot Smoothed Deaths and Cases", "value": False}
+                            ],
+                            value=False, #HACK: notice that this is a boolean
+                            id="smoothed-actual-values-toggle",
+                            switch=True,
+                        ),
+                        dbc.Tooltip(
+                            "For metrics with actual historical data (e.g.deaths/confirmed cases), plot rolling "
+                            "window of actual values as bars and projected values as lines (Default: False)",
+                            target="smoothed-actual-values-toggle",
+                            placement='right',
+                            offset=0,
+                        ),
+                        dcc.Input(
+                            #TODO: Offset this to be shifted below the toggle button?
+                            id="window_size",
+                            type="number",
+                            placeholder="Rolling window size. (Default: 7 days)",
+                            debounce=True,
+                            min=1,
+                            max=28,
+                            value=7
+                            )
+                    ]
+                ),
+                dbc.FormGroup( #TODO: Fix Top and Left margins to align
                     [
                         dbc.Label("IHME Colorscale"),
                         dbc.Col(
@@ -351,6 +391,8 @@ app.layout = dbc.Container(
     fluid=True,
 )
 
+
+
 @app.callback(
     Output("more-info-collapse", "is_open"),
     [Input("more-info-button", "n_clicks")],
@@ -453,13 +495,15 @@ def build_cards(dff, metric, model):
         Input("model-date-picker", "start_date"),
         Input("model-date-picker", "end_date"),
         Input("log-scale-toggle", "value"),
+        Input("smoothed-actual-values-toggle", "value"),
+        Input("window_size", "value"),
         Input("actual-values-toggle", "value"),
         Input("ihme-color-dropdown", "value"),
         Input("lanl-color-dropdown", "value")
     ],
 
 )
-def make_primary_graph(model, location, metric, start_date, end_date, log_scale, actual_values, color_scale_ihme, color_scale_lanl):
+def make_primary_graph(model, location, metric, start_date, end_date, log_scale, smoothed, window_size, actual_values, color_scale_ihme, color_scale_lanl):
     '''Callback for the primary historical projections line chart
     '''
     dff = filter_df(model, location, metric, start_date, end_date)
@@ -491,6 +535,8 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
             act_dff = act_dff[(act_dff.date <= act_dff.model_date) & (act_dff.model_date == act_dff.model_date.max())]
         else:
             act_dff = dff[(dff.date <= dff.model_date) & (dff.model_date == dff.model_date.max())]
+        if smoothed:
+            act_dff[f'rolling_{metric}'] = act_dff[metric].rolling(window=window_size).mean()
         act_dff = act_dff.drop_duplicates(keep='first')
 
 
@@ -508,7 +554,7 @@ def make_primary_graph(model, location, metric, start_date, end_date, log_scale,
         actual = px.bar(
             act_dff,
             x='date',
-            y=metric,
+            y= (f'rolling_{metric}' if smoothed else metric),
             hover_name='date',
             color_discrete_sequence=['#696969']
         )
