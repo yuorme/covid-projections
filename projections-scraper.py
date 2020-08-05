@@ -18,6 +18,7 @@ import itertools
 import zipfile
 from sqlalchemy import create_engine
 
+import reformat_cu_data as rcd
 from column_translater import lanl_to_ihme_translator
 from region_abbreviations import us_state_abbrev
 from config import app_config
@@ -264,5 +265,6 @@ def create_projections_table():
 if __name__ == "__main__":
     get_lanl_df()
     get_ihme_df()
+    cu = rcd.get_cu_df()
     merge_projections()
     create_projections_table()
