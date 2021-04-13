@@ -314,7 +314,7 @@ controls = dbc.Card(
                     id='model-date-picker',
                     min_date_allowed=min_date,
                     max_date_allowed=datetime.today(),
-                    start_date=datetime.today() - timedelta(days=60), #HACK: Temporarily fixes the colorscale issue for >12 models
+                    start_date='2020-07-01', #HACK: Temporarily fixes DB not updating
                     end_date=datetime.today(),
                     initial_visible_month=datetime.today(),
                 ),
