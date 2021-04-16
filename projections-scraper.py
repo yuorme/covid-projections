@@ -193,12 +193,12 @@ def merge_projections():
         'mobility_composite','total_tests','confirmed_infections',
         'est_infections_mean','est_infections_lower','est_infections_upper',
         'deaths_mean_smoothed','deaths_lower_smoothed','deaths_upper_smoothed',
-        'totdea_mean_smoothed','totdea_lower_smoothed','totdea_upper_smoothed'
+        'totdea_mean_smoothed','totdea_lower_smoothed','totdea_upper_smoothed',
         #more new columns
         'total_pop', 
         'deaths_mean_p100k_rate', 'deaths_lower_p100k_rate', 'deaths_upper_p100k_rate', 
-        'deaths_mean_smoothed_p100k_rate', 'deaths_lower_smoothed_p100k_rate', 'deaths_upper_smoothed_p100k_rate', 
         'totdea_mean_p100k_rate', 'totdea_lower_p100k_rate', 'totdea_upper_p100k_rate', 
+        'deaths_mean_smoothed_p100k_rate', 'deaths_lower_smoothed_p100k_rate', 'deaths_upper_smoothed_p100k_rate', 
         'totdea_mean_smoothed_p100k_rate', 'totdea_lower_smoothed_p100k_rate', 'totdea_upper_smoothed_p100k_rate', 
         'confirmed_infections_p100k_rate', 'est_infections_mean_p100k_rate', 'est_infections_lower_p100k_rate', 
         'est_infections_upper_p100k_rate', 
@@ -208,7 +208,7 @@ def merge_projections():
         #even more new columns
         'deaths_data_type', 'confirmed_infections_data_type', 'est_infections_data_type', 
         'seroprev_data_type', 'observed'
-    ]
+     ]
     ihme.drop(columns=new_ihme_columns, inplace=True)
 
     #HACK: drop old IHME forecasts to save space
@@ -261,6 +261,7 @@ def create_projections_table():
     df = df[df.model_version != '2020_04_05.05.us']
 
     print(df.info(memory_usage='deep'))
+    print(df.columns)
 
     df['date'] = pd.to_datetime(df['date'])
     df['model_date'] = pd.to_datetime(df['model_version'].str[0:10].str.replace('_','-'))
@@ -278,8 +279,8 @@ def create_projections_table():
     print('starting upsert')
 
     #if we need to do it day by day
-    model_dates = (df[df.index.get_level_values('model_date') >= '2021-04-01'] #HACK! - hardcoded to do fill
-        .index.get_level_values('model_date').unique()) 
+    model_dates = df[df.index.get_level_values('model_date') >= '2021-04-01']\
+        .index.get_level_values('model_date').unique() #HACK! - hardcoded to do fill
     print(model_dates)
     
     for md in model_dates:
@@ -287,7 +288,7 @@ def create_projections_table():
         dff = df[df.index.get_level_values('model_date') == md] 
         print(f'''
             model_date: {md}, 
-            model_names: {dff[dff.index.get_level_values('model_name').unique()]} 
+            model_names: {dff.index.get_level_values('model_name').unique()} 
             memory: {dff.memory_usage(deep=True).sum()}
         ''')
 
