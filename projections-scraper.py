@@ -36,7 +36,7 @@ def get_date_list(min_date):
         
     return date_list
 
-def get_lanl_df(min_date='2020-04-04'):
+def get_lanl_df(min_date='2020-04-15'):
     '''
     download lanl projections and compiles into one csv file
     returns: None
@@ -51,25 +51,38 @@ def get_lanl_df(min_date='2020-04-04'):
         
         for date in lanl_dates:
 
-            for suffix in ['','_website']: #LANL added _website suffix to files in their 2020-04-26 update
+            #LANL added _website suffix to files in their 2020-04-26 update
+            
+            suffix = ''
+            if date >= '2020-04-26': 
+                suffix = '_website' 
 
-                for scope in ['us','global']:
-        
-                    url = f'https://covid-19.bsvgateway.org/forecast/{scope}/files/{date}/{metric}/{date}_{metric}_quantiles_{scope}{suffix}.csv'
-                    r = requests.get(url)
+            for geo in ['us','global']:
+                #lanl changed their filenames after the 2020-10-28 update
+                if date <= '2020-10-28':
+                    fname = f'{date}_{metric}_quantiles_{geo}{suffix}.csv'
+                else:
+                    if metric == 'deaths':
+                        fname = f'{date}_{geo}_cumulative_daily_deaths{suffix}.csv'
+                    elif metric == 'confirmed':
+                        fname = f'{date}_{geo}_cumulative_daily_cases{suffix}.csv'
+                
+                url = f'https://covid-19.bsvgateway.org/forecast/{geo}/{date}/files/{fname}'
+                r = requests.get(url)
 
-                    if r.ok:
-                        data = r.content.decode('utf8')
-                        df = pd.read_csv(io.StringIO(data))
-                        df['metric'] = metric
-                        df.drop(columns=['simple_state','simple_countries'], inplace=True, errors='ignore')
-                        df.rename(columns={'state':'location_name','countries':'location_name'}, inplace=True)
-                        df_list.append(df)
-                        print(f'lanl scraped {metric}: {date} {scope} {suffix}')
-                    else:
-                        print('no metrics for:', date, scope, suffix)
+                if r.ok:
+                    data = r.content.decode('utf8')
+                    df = pd.read_csv(io.StringIO(data))
+                    df['metric'] = metric
+                    df.drop(columns=['simple_state','simple_countries'], inplace=True, errors='ignore')
+                    df.rename(columns={'state':'location_name','countries':'location_name'}, inplace=True)
+                    df_list.append(df)
+                    print(f'lanl {date}: {fname} total: {len(df_list)}')
 
-                    time.sleep(0.2) #pause between requests
+
+                time.sleep(0.2) #pause between requests
+
+                    
         
         #merge and process data
         if len(df_list) > 0:
@@ -286,11 +299,7 @@ def create_projections_table():
     for md in model_dates:
         #upsert by model_date rather than all at once
         dff = df[df.index.get_level_values('model_date') == md] 
-        print(f'''
-            model_date: {md}, 
-            model_names: {dff.index.get_level_values('model_name').unique()} 
-            memory: {dff.memory_usage(deep=True).sum()}
-        ''')
+        print(f"model_date: {md}, model_names: {dff.index.get_level_values('model_name').unique()}, memory: {dff.memory_usage(deep=True).sum()}")
 
         upsert(engine=engine,
             df=dff,
@@ -301,7 +310,7 @@ def create_projections_table():
             adapt_dtype_of_empty_db_columns=False)
 
 if __name__ == "__main__":
-    # get_lanl_df()
-    # get_ihme_df()
-    # merge_projections()
+    get_lanl_df()
+    get_ihme_df()
+    merge_projections()
     create_projections_table()
