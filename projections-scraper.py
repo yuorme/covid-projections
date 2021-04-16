@@ -194,6 +194,20 @@ def merge_projections():
         'est_infections_mean','est_infections_lower','est_infections_upper',
         'deaths_mean_smoothed','deaths_lower_smoothed','deaths_upper_smoothed',
         'totdea_mean_smoothed','totdea_lower_smoothed','totdea_upper_smoothed'
+        #more new columns
+        'total_pop', 
+        'deaths_mean_p100k_rate', 'deaths_lower_p100k_rate', 'deaths_upper_p100k_rate', 
+        'totdea_mean_p100k_rate', 'totdea_lower_p100k_rate', 'totdea_upper_p100k_rate', 
+        'deaths_mean_smoothed_p100k_rate', 'deaths_lower_smoothed_p100k_rate', 'deaths_upper_smoothed_p100k_rate', 
+        'totdea_mean_smoothed_p100k_rate', 'totdea_lower_smoothed_p100k_rate', 'totdea_upper_smoothed_p100k_rate', 
+        'confirmed_infections_p100k_rate', 'est_infections_mean_p100k_rate', 'est_infections_lower_p100k_rate', 
+        'est_infections_upper_p100k_rate', 
+        'inf_cuml_mean', 'inf_cuml_lower', 'inf_cuml_upper', 
+        'sero_pct', 'sero_pctlower', 'sero_pctupper', 
+        'seroprev_mean', 'seroprev_upper', 'seroprev_lower',
+        #even more new columns
+        'deaths_data_type', 'confirmed_infections_data_type', 'est_infections_data_type', 
+        'seroprev_data_type', 'observed'
     ]
     ihme.drop(columns=new_ihme_columns, inplace=True)
 
