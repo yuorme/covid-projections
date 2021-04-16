@@ -178,6 +178,7 @@ def process_lanl_compiled(metric):
         df[c] = np.where(df[c] < 0, 0, df[c])
 
     df.columns = [c if 'q' not in c else metric+'_'+c for c in df.columns] #add metric name to lanl metric columns
+    df.dropna(subset=lanl_index, inplace=True) #for some reason 'location_name' and 'dates' columns can be na. this leads to an exploding join
     df.set_index(lanl_index, inplace=True)
   
     return df
@@ -196,6 +197,8 @@ def merge_projections():
     lanl = lanl_dea.merge(lanl_con, right_index=True, left_index=True).reset_index()
     lanl.rename(columns=lanl_to_ihme_translator, inplace=True) #convert to IHME column names
     lanl['model_name'] = 'LANL'
+
+    print(f"processed lanl - memory: {lanl.memory_usage(deep=True)}")
 
     #load IHME data
     ihme = pd.read_csv(os.path.join('data','ihme_compiled.csv'))
@@ -232,6 +235,8 @@ def merge_projections():
     ]
     ihme = ihme[~ihme.model_version.isin(drop_models)]
     ihme['model_name'] = 'IHME'
+
+    print(f"processed ihme - memory: {ihme.memory_usage(deep=True)}")
 
     #concatenate IHME and LANL data
     merged = pd.concat([ihme, lanl], axis=0, ignore_index=True)
