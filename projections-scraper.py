@@ -36,7 +36,7 @@ def get_date_list(min_date):
         
     return date_list
 
-def get_lanl_df(min_date='2020-04-15'):
+def get_lanl_df(min_date='2020-04-05'):
     '''
     download lanl projections and compiles into one csv file
     returns: None
