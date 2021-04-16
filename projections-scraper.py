@@ -228,12 +228,14 @@ def merge_projections():
 
 
 def create_projections_table():
+
+    print('creating db')
     # create the covid_projections db
-    engine = create_engine(app_config['sqlalchemy_database_uri'], echo=True)
+    engine = create_engine(app_config['sqlalchemy_database_uri'], echo=False)
 
     # Make same changes as in the load_projections function
     df = pd.read_csv(os.path.join('data','merged_projections.csv'), nrows=50)
-
+    
     dtypes = [
         'category','str',
         'float32','float32','float32',
@@ -250,10 +252,15 @@ def create_projections_table():
         'float32','float32','float32',
     ]
 
+    if len(df.columns) != len(dtypes):
+        print(f'len mismatch between df.columns ({len(df.columns)}) and dtypes ({len(dtypes)})')
+
     pd_dtypes = dict(zip(df.columns, dtypes))
 
     df = pd.read_csv(os.path.join('data','merged_projections.csv'), dtype=pd_dtypes)
     df = df[df.model_version != '2020_04_05.05.us']
+
+    print(df.info(memory_usage='deep'))
 
     df['date'] = pd.to_datetime(df['date'])
     df['model_date'] = pd.to_datetime(df['model_version'].str[0:10].str.replace('_','-'))
@@ -267,10 +274,12 @@ def create_projections_table():
     # 'ALTER TABLE projections ADD PRIMARY KEY (location_name, date, model_date, model_name);'
     # This upsert package requires us to name the index
     # df.index.name = 'index'
+    
+    print('starting upsert')
 
-    #upsert day by day to reduce memory usage
-    model_dates = df[df.index.get_level_values('model_date') >= '2020-09-24']\
-        .index.get_level_values('model_date').unique() #HACK! - hardcoded to do fill
+    #if we need to do it day by day
+    model_dates = (df[df.index.get_level_values('model_date') >= '2021-04-01'] #HACK! - hardcoded to do fill
+        .index.get_level_values('model_date').unique()) 
     print(model_dates)
     
     for md in model_dates:
@@ -291,7 +300,7 @@ def create_projections_table():
             adapt_dtype_of_empty_db_columns=False)
 
 if __name__ == "__main__":
-    get_lanl_df()
-    get_ihme_df()
-    merge_projections()
+    # get_lanl_df()
+    # get_ihme_df()
+    # merge_projections()
     create_projections_table()
