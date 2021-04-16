@@ -197,8 +197,8 @@ def merge_projections():
         #more new columns
         'total_pop', 
         'deaths_mean_p100k_rate', 'deaths_lower_p100k_rate', 'deaths_upper_p100k_rate', 
-        'totdea_mean_p100k_rate', 'totdea_lower_p100k_rate', 'totdea_upper_p100k_rate', 
         'deaths_mean_smoothed_p100k_rate', 'deaths_lower_smoothed_p100k_rate', 'deaths_upper_smoothed_p100k_rate', 
+        'totdea_mean_p100k_rate', 'totdea_lower_p100k_rate', 'totdea_upper_p100k_rate', 
         'totdea_mean_smoothed_p100k_rate', 'totdea_lower_smoothed_p100k_rate', 'totdea_upper_smoothed_p100k_rate', 
         'confirmed_infections_p100k_rate', 'est_infections_mean_p100k_rate', 'est_infections_lower_p100k_rate', 
         'est_infections_upper_p100k_rate', 
@@ -268,12 +268,27 @@ def create_projections_table():
     # This upsert package requires us to name the index
     # df.index.name = 'index'
 
-    upsert(engine=engine,
-           df=df,
-           table_name=app_config['database_name'],
-           if_row_exists='ignore', chunksize=5000,
-           add_new_columns=False,
-           create_schema=False)
+    #upsert day by day to reduce memory usage
+    model_dates = df[df.index.get_level_values('model_date') >= '2020-09-24']\
+        .index.get_level_values('model_date').unique() #HACK! - hardcoded to do fill
+    print(model_dates)
+    
+    for md in model_dates:
+        #upsert by model_date rather than all at once
+        dff = df[df.index.get_level_values('model_date') == md] 
+        print(f'''
+            model_date: {md}, 
+            model_names: {dff[dff.index.get_level_values('model_name').unique()]} 
+            memory: {dff.memory_usage(deep=True).sum()}
+        ''')
+
+        upsert(engine=engine,
+            df=dff,
+            table_name=app_config['database_name'],
+            if_row_exists='ignore', chunksize=5000,
+            add_new_columns=False,
+            create_schema=False,
+            adapt_dtype_of_empty_db_columns=False)
 
 if __name__ == "__main__":
     get_lanl_df()
