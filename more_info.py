@@ -31,11 +31,13 @@ more_info_card = dbc.CardDeck(
                         Displaying a model on our website is **not an endorsement** of model accuracy. 
                         We currently display historical trends for IHME and LANL models primarily because they were the first groups to make their data easily accessible. 
                         
-                        [**IHME**](https://covid19.healthdata.org/united-states-of-america) - Non-linear mixed effects curve-fitting. There are
+                        [**IHME**](https://covid19.healthdata.org/united-states-of-america) - Earlier versions of this model had
                         [known](https://www.statnews.com/2020/04/17/influential-covid-19-model-uses-flawed-methods-shouldnt-guide-policies-critics-say/) 
-                        [issues](https://twitter.com/CT_Bergstrom/status/1250304069119275009) with this model.
+                        [issues](https://twitter.com/CT_Bergstrom/status/1250304069119275009) where it would significantly underestimated death rates. 
+                        IHME updated to a [multi-stage hybrid model](http://www.healthdata.org/sites/default/files/files/Projects/COVID/Estimation_update_050420.pdf) on May 4, 2020. 
                         
                         [**LANL**](https://covid-19.bsvgateway.org/#link%20to%20forecasting%20site) - Statistical dynamical growth model accounting for population susceptibility. 
+                        LANL updated their model to v2 on Oct/ 28, 2020 ([Paper PDF](https://covid-19.bsvgateway.org/static/COFFEE-methodology.pdf)).
                         ''',
                         className="card-text",
                     ),
