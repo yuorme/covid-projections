@@ -72,11 +72,24 @@ def get_lanl_df(min_date='2020-04-05'):
 
                 if r.ok:
                     data = r.content.decode('utf8')
-                    df = pd.read_csv(io.StringIO(data))
-                    df['metric'] = metric
-                    df.drop(columns=['simple_state','simple_countries'], inplace=True, errors='ignore')
-                    df.rename(columns={'state':'location_name','countries':'location_name'}, inplace=True)
-                    df_list.append(df)
+                    tmp = pd.read_csv(io.StringIO(data))
+                    tmp['metric'] = metric
+                    #drop columns that are not consistent between all model versions
+                    drop_cols = ['simple_state','simple_countries','key','big_group','truth_confirmed','q.025','q.975']
+                    tmp.drop(columns=drop_cols, inplace=True, errors='ignore')
+                    #rename columns so they are consistent between all model versions
+                    rename_dict = {'state':'location_name','countries':'location_name','name':'location_name','date':'dates'}
+                    tmp.rename(columns=rename_dict, inplace=True)
+                    
+                    #subset and order final columns
+                    cols = [
+                        'dates','q.01','q.05','q.10','q.15','q.20','q.25',
+                        'q.30','q.35','q.40','q.45','q.50','q.55','q.60','q.65',
+                        'q.70','q.75','q.80','q.85','q.90','q.95','q.99',
+                        'obs','location_name','fcst_date'
+                    ]
+
+                    df_list.append(tmp[cols])
                     print(f'lanl {date}: {fname} total: {len(df_list)}')
 
 
@@ -161,7 +174,7 @@ def process_lanl_compiled(metric):
     '''
     df = pd.read_csv(os.path.join('data',f'lanl_{metric}_compiled.csv'))
 
-    lanl_keep_cols = ['dates','location_name','q025','q50','q975','fcst_date'] #TODO: using 95% CI (97.5/2.5). Is this consistent with IHME?
+    lanl_keep_cols = ['dates','location_name','q05','q50','q95','fcst_date'] #TODO: using 90% CI (95/5). Is this consistent with IHME?
     lanl_index = ['fcst_date','location_name','dates']
     lanl_metrics = [c for c in lanl_keep_cols if 'q' == c[0]]
     lanl_metrics_diff = [c+'_diff' for c in lanl_metrics]
@@ -178,6 +191,7 @@ def process_lanl_compiled(metric):
         df[c] = np.where(df[c] < 0, 0, df[c])
 
     df.columns = [c if 'q' not in c else metric+'_'+c for c in df.columns] #add metric name to lanl metric columns
+    print(df.shape, df.dropna(subset=lanl_index, how='all').shape, df.dropna(subset=lanl_index).shape)
     df.dropna(subset=lanl_index, inplace=True) #for some reason 'location_name' and 'dates' columns can be na. this leads to an exploding join
     df.set_index(lanl_index, inplace=True)
   
@@ -272,6 +286,7 @@ def create_projections_table():
 
     if len(df.columns) != len(dtypes):
         print(f'len mismatch between df.columns ({len(df.columns)}) and dtypes ({len(dtypes)})')
+        print(df.info())
 
     pd_dtypes = dict(zip(df.columns, dtypes))
 
@@ -296,15 +311,15 @@ def create_projections_table():
     
     print('starting upsert')
 
-    #if we need to do it day by day
-    model_dates = df[df.index.get_level_values('model_date') >= '2021-04-01']\
+    #upsert by model_date rather than all at once
+    model_dates = df[df.index.get_level_values('model_date') >= '2020-09-30']\
         .index.get_level_values('model_date').unique() #HACK! - hardcoded to do fill
     print(model_dates)
     
     for md in model_dates:
-        #upsert by model_date rather than all at once
+        
         dff = df[df.index.get_level_values('model_date') == md] 
-        print(f"model_date: {md}, model_names: {dff.index.get_level_values('model_name').unique()}, memory: {dff.memory_usage(deep=True).sum()}")
+        print(f"model_date: {md}, model_names: {dff.index.get_level_values('model_name').astype('str').unique()}, memory: {dff.memory_usage(deep=True).sum()}")
 
         upsert(engine=engine,
             df=dff,

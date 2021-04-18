@@ -57,19 +57,19 @@ lanl_to_ihme_translator = {
     'state':'location_name',
     'fcst_date':'model_version',
     #cumulative stats
-    'deaths_q025':'totdea_lower',
+    'deaths_q05':'totdea_lower',
     'deaths_q50':'totdea_mean',
-    'deaths_q975':'totdea_upper',
-    'confirmed_q025':'confirmed_lower',
+    'deaths_q95':'totdea_upper',
+    'confirmed_q05':'confirmed_lower',
     'confirmed_q50':'confirmed_mean',
-    'confirmed_q975':'confirmed_upper',
+    'confirmed_q95':'confirmed_upper',
     #calculated daily stats
-    'deaths_q025_diff':'deaths_lower',
+    'deaths_q05_diff':'deaths_lower',
     'deaths_q50_diff':'deaths_mean',
-    'deaths_q975_diff':'deaths_upper',
-    'confirmed_q025_diff':'daily_confirmed_lower',
+    'deaths_q95_diff':'deaths_upper',
+    'confirmed_q05_diff':'daily_confirmed_lower',
     'confirmed_q50_diff':'daily_confirmed_mean',
-    'confirmed_q975_diff':'daily_confirmed_upper',
+    'confirmed_q95_diff':'daily_confirmed_upper',
 }
 
     
