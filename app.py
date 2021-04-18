@@ -72,7 +72,7 @@ def filter_df(model, location, metric, start_date, end_date):
 
     dff.dropna(subset=[metric], inplace=True)
 
-    dff['model_label'] = dff['model_name'].astype('str') + '-' + dff['model_date'].dt.strftime("%m/%d").str[1:]
+    dff['model_label'] = dff['model_name'].astype('str') + '-' + dff['model_date'].dt.strftime("%y/%m/%d")
     dff['model_name'] = dff['model_name'].astype('str')
     dff = dff.sort_values(['model_label','date'])
     
@@ -314,7 +314,7 @@ controls = dbc.Card(
                     id='model-date-picker',
                     min_date_allowed=min_date,
                     max_date_allowed=datetime.today(),
-                    start_date=datetime.today() - timedelta(days=60), #HACK: Temporarily fixes DB not updating
+                    start_date=datetime.today() - timedelta(days=45), #HACK: Temporarily fixes DB not updating
                     end_date=datetime.today(),
                     initial_visible_month=datetime.today(),
                 ),
