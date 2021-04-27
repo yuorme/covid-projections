@@ -339,6 +339,10 @@ if __name__ == "__main__":
     if not os.path.exists('data'):
         os.mkdir('data')
 
+    print('creating db engine')
+    # create the covid_projections db
+    engine = create_engine(app_config['sqlalchemy_database_uri'], echo=False)
+
     get_lanl_df(min_date)
     get_ihme_df(min_date)
     merge_projections()
