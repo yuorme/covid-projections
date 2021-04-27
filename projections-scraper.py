@@ -23,7 +23,6 @@ from column_translater import lanl_to_ihme_translator
 from region_abbreviations import us_state_abbrev
 from config import app_config
 from plot_option_data import csv_dtypes
-from helper import flatten
 
 def get_date_list(min_date):
     '''
