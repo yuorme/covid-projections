@@ -4,6 +4,7 @@
 import os
 import time
 from datetime import datetime, date, timedelta
+import argparse
 
 import pandas as pd
 import numpy as np
@@ -36,7 +37,7 @@ def get_date_list(min_date):
         
     return date_list
 
-def get_lanl_df(min_date='2020-04-05'):
+def get_lanl_df(min_date=None):
     '''
     download lanl projections and compiles into one csv file
     returns: None
@@ -125,7 +126,7 @@ def get_ihme_filelist():
     
     return file_list
 
-def get_ihme_df():
+def get_ihme_df(min_date=None):
     '''
     download ihme projections and compiles into one csv file
     returns: None
@@ -134,6 +135,8 @@ def get_ihme_df():
     df_list = []
     
     file_list = get_ihme_filelist()
+    if min_date != None:
+        file_list = [f for f in file_list if f.split('/')[-2] >= min_date]
 
     for f in file_list:
 
@@ -233,13 +236,14 @@ def merge_projections():
         'confirmed_infections_p100k_rate', 'est_infections_mean_p100k_rate', 'est_infections_lower_p100k_rate', 
         'est_infections_upper_p100k_rate', 
         'inf_cuml_mean', 'inf_cuml_lower', 'inf_cuml_upper', 
-        'sero_pct', 'sero_pctlower', 'sero_pctupper', 
+        'sero_pct', 'sero_pctlower', 'sero_pctupper', #column names may have changed for seroprevalence
         'seroprev_mean', 'seroprev_upper', 'seroprev_lower',
         #even more new columns
         'deaths_data_type', 'confirmed_infections_data_type', 'est_infections_data_type', 
-        'seroprev_data_type', 'observed'
+        'seroprev_data_type', 
+        'observed' #this column may have been added then removed
      ]
-    ihme.drop(columns=new_ihme_columns, inplace=True)
+    ihme.drop(columns=new_ihme_columns, inplace=True, errors='ignore')
 
     #HACK: drop old IHME forecasts to save space
     drop_models = [
@@ -259,7 +263,7 @@ def merge_projections():
     print('merged data:', merged.shape)
 
 
-def create_projections_table():
+def create_projections_table(min_date):
 
     print('creating db')
     # create the covid_projections db
@@ -312,7 +316,7 @@ def create_projections_table():
     print('starting upsert')
 
     #upsert by model_date rather than all at once
-    model_dates = df[df.index.get_level_values('model_date') >= '2020-09-30']\
+    model_dates = df[df.index.get_level_values('model_date') >= min_date]\
         .index.get_level_values('model_date').unique() #HACK! - hardcoded to do fill
     print(model_dates)
     
@@ -330,7 +334,10 @@ def create_projections_table():
             adapt_dtype_of_empty_db_columns=False)
 
 if __name__ == "__main__":
-    get_lanl_df()
-    get_ihme_df()
+
+    min_date = '2021-04-10'
+
+    # get_lanl_df(min_date)
+    # get_ihme_df(min_date)
     merge_projections()
-    create_projections_table()
+    create_projections_table(min_date)
