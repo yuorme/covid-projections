@@ -23,6 +23,7 @@ from column_translater import lanl_to_ihme_translator
 from region_abbreviations import us_state_abbrev
 from config import app_config
 from plot_option_data import csv_dtypes
+from helper import flatten
 
 def get_date_list(min_date):
     '''
@@ -265,9 +266,7 @@ def merge_projections():
 
 def create_projections_table(min_date):
 
-    print('creating db')
-    # create the covid_projections db
-    engine = create_engine(app_config['sqlalchemy_database_uri'], echo=False)
+    print('upserting db')
 
     # Make same changes as in the load_projections function
     df = pd.read_csv(os.path.join('data','merged_projections.csv'), nrows=50)
@@ -337,7 +336,11 @@ if __name__ == "__main__":
 
     min_date = '2021-04-10'
 
-    # get_lanl_df(min_date)
-    # get_ihme_df(min_date)
+    print('creating db engine')
+    # create the covid_projections db
+    engine = create_engine(app_config['sqlalchemy_database_uri'], echo=False)
+
+    get_lanl_df(min_date)
+    get_ihme_df(min_date)
     merge_projections()
     create_projections_table(min_date)

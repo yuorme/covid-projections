@@ -6,7 +6,6 @@ import numpy as np
 import os
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine
-from collections.abc import Iterable
 
 import dash
 import dash_core_components as dcc
@@ -23,19 +22,11 @@ from more_info import more_info_alert
 from column_translater import column_translator
 from plot_option_data import csv_dtypes, table_dtypes
 from config import app_config, plotly_config
+from helper import flatten
 
 # make sqlite connection
 engine = create_engine(app_config['sqlalchemy_database_uri'])
 table_name = app_config['database_name']
-
-def flatten(items):
-    """Yield items from any nested iterable; see Reference."""
-    for x in items:
-        if isinstance(x, Iterable) and not isinstance(x, (str, bytes)):
-            for sub_x in flatten(x):
-                yield sub_x
-        else:
-            yield x
 
 def unique_location_names():
     df = pd.read_sql_query("SELECT DISTINCT location_name FROM projections", engine)
