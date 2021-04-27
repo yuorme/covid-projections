@@ -334,11 +334,7 @@ def create_projections_table(min_date):
 
 if __name__ == "__main__":
 
-    min_date = '2021-04-10'
-
-    print('creating db engine')
-    # create the covid_projections db
-    engine = create_engine(app_config['sqlalchemy_database_uri'], echo=False)
+    min_date = str(date.today() - timedelta(days=10))
 
     get_lanl_df(min_date)
     get_ihme_df(min_date)
