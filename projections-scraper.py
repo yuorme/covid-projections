@@ -336,6 +336,9 @@ if __name__ == "__main__":
 
     min_date = str(date.today() - timedelta(days=10))
 
+    if not os.path.exists('data'):
+        os.mkdir('data')
+
     get_lanl_df(min_date)
     get_ihme_df(min_date)
     merge_projections()
