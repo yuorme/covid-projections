@@ -318,7 +318,7 @@ def create_projections_table(min_date):
         .index.get_level_values('model_date').unique() #HACK! - hardcoded to do fill
     print(model_dates)
     
-    for md in model_dates:
+    for md in reversed(model_dates):
         
         dff = df[df.index.get_level_values('model_date') == md] 
         print(f"model_date: {md}, model_names: {dff.index.get_level_values('model_name').astype('str').unique()}, memory: {dff.memory_usage(deep=True).sum()}")
@@ -333,7 +333,7 @@ def create_projections_table(min_date):
 
 if __name__ == "__main__":
 
-    min_date = str(date.today() - timedelta(days=10))
+    min_date = str(date.today() - timedelta(days=7))
 
     if not os.path.exists('data'):
         os.mkdir('data')
